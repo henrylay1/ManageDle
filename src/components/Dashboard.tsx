@@ -113,7 +113,7 @@ function Dashboard() {
   const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
   const [showAddGame, setShowAddGame] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
-  const [showScoreEntry, setShowScoreEntry] = useState(false);
+  // const [showScoreEntry, setShowScoreEntry] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showRemove, setShowRemove] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
