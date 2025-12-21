@@ -1,4 +1,3 @@
-
 /**
  * Parse Wordle-style share text to extract game information
  */
@@ -116,17 +115,32 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
 
   // Wantedle
   if (normalizedGameName === 'wantedle') {
-    const wantedleMatch = text.match(/WANTEDLE\s+#([\d,]+)\s+-\s+(\w+)\s+([A-Z])\s+-\s+([\d.]+)s/i);
+    const wantedleMatch = text.match(/WANTEDLE\s+#([\d,]+)/i);
     if (!wantedleMatch) {
-      throw new Error('❌ Incorrect share text for Wantedle. Expected format: "WANTEDLE #... - Hard/Easy S/D - n.ns..."');
+      throw new Error('❌ Incorrect share text for Wantedle. Expected format: "WANTEDLE #... - Difficulty\n[Grade] - [time]s..."');
     }
-    const [, puzzleNumber, , resultCode, timeStr] = wantedleMatch;
+    const [, puzzleNumber] = wantedleMatch;
+    
+    // Extract the score line (e.g., "B - 19.2s")
+    const scoreMatch = text.match(/([A-F])\s*-\s*([\d.]+)s/i);
+    if (!scoreMatch) {
+      throw new Error('❌ Incorrect share text for Wantedle. Could not find score line (e.g., "B - 19.2s")');
+    }
+    
+    const [, grade, timeStr] = scoreMatch;
     result.gameName = 'Wantedle';
     result.puzzleNumber = puzzleNumber;
-    // Store time in milliseconds as integer (e.g., 2.4s -> 2400ms)
+    // Store time in milliseconds as main score (e.g., 19.2s -> 19200ms)
     result.score = Math.round(parseFloat(timeStr) * 1000);
     result.completed = true;
-    result.failed = resultCode === 'D';
+    // Fail if grade is C, D, E, F
+    result.failed = /[C-F]/i.test(grade);
+    // Store grade in additionalScores for display
+    result.additionalScores = [{
+      label: 'Grade',
+      value: grade,
+      maxValue: undefined
+    }];
     
     // Extract emoji (single emoji line)
     const emojiLines = lines.filter(line => {
@@ -1005,7 +1019,7 @@ export function parsePokedleSummary(text: string): PokedleParsedResult | null {
 
 /**
  * Parse Gamedle summary text
- * Format: "Gamedle\n🕹️ (Cover art) #1337:\n🟥🟥🟥🟥🟥🟥\n\n🎨 (Artwork) #1096:\n🟥🟥🟥🟥🟥🟥\n..."
+ * Format: "Gamedle\n🕹️ (Cover art) #1337:\n🟥🟥🟥🟥🟥🟩\n\n🎨 (Artwork) #1096:\n🟥🟥🟥🟥🟥🟩\n..."
  */
 export function parseGamedleSummary(text: string): GamedleParsedResult | null {
   if (!text || text.trim().length === 0) {

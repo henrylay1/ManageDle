@@ -305,6 +305,12 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               updated[index].failed = fullParsed.failed;
               updated[index].additionalScores = (fullParsed as any).additionalScores || [];
             }
+            
+            // For Wantedle, store grade and time separately
+            if (game.displayName === 'Wantedle') {
+              updated[index].score = fullParsed.score; // Time in milliseconds
+              updated[index].additionalScores = fullParsed.additionalScores || [];
+            }
 
           }
           
@@ -352,9 +358,25 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Always show yellow highlight and warning on save/update
-    setHasValidationError(true);
-    setParseMessage('⚠️ Please check your share text format.');
+    // Check if any share text is empty or invalid
+    const hasEmptyOrInvalidShareText = shareTexts.some(st => {
+      // Empty share text
+      if (!st.shareText || st.shareText.trim().length === 0) return true;
+      // Not completed (parsing failed)
+      if (!st.completed) return true;
+      return false;
+    });
+
+    if (hasEmptyOrInvalidShareText) {
+      setHasValidationError(true);
+      setParseMessage('⚠️ Please check your share text format.');
+      setIsSubmitting(false);
+      return; // Don't save if validation fails
+    }
+    
+    // Valid share text - clear any previous errors
+    setHasValidationError(false);
+    setParseMessage('');
 
     try {
       // Calculate overall completion status
@@ -368,12 +390,20 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         : false;
       
       // Calculate overall score
-      // For multiple share texts: sum of all scores
+      // For multiple share texts: sum of all scores (only for numeric scores)
       // For single share text: just use that score
       const entriesWithScore = shareTexts.filter(st => st.score !== undefined && st.score !== null);
-      const totalScore = entriesWithScore.length > 0
-        ? entriesWithScore.reduce((sum, st) => sum + (st.score ?? 0), 0)
-        : undefined;
+      let totalScore: number | string | undefined;
+      
+      if (entriesWithScore.length === 0) {
+        totalScore = undefined;
+      } else if (entriesWithScore.length === 1 || typeof entriesWithScore[0].score === 'string') {
+        // Single entry or string score (like Wantedle "B - 19.2s") - use as-is
+        totalScore = entriesWithScore[0].score;
+      } else {
+        // Multiple numeric scores - sum them
+        totalScore = entriesWithScore.reduce((sum, st) => sum + (Number(st.score) || 0), 0);
+      }
 
       const recordData = {
         gameId: game.gameId,
@@ -384,7 +414,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         metadata: {
           hardMode: shareTexts.some(st => st.hardMode),
           shareTexts: shareTexts,
-          hasInvalidShareText: true,
+          hasInvalidShareText: false,
         },
       };
 
@@ -554,7 +584,17 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                         <input
                           type="text"
                           className="score-input-small"
-                          value={typeof entry.score === 'number' ? (entry.failed ? 'X' : entry.score) + (entry.shareText.match(/\/(\d+)/)?.[1] ? `/${entry.shareText.match(/\/(\d+)/)?.[1]}` : '') : ''}
+                          value={
+                            game.displayName === 'Wantedle'
+                              ? (typeof entry.score === 'number' && !entry.failed
+                                  ? `${(entry.score / 1000).toFixed(1)}s`
+                                  : entry.failed ? 'X' : '')
+                              : typeof entry.score === 'number'
+                                ? (entry.failed
+                                    ? 'X'
+                                    : entry.score + (entry.shareText.match(/\/(\d+)/)?.[1] ? `/${entry.shareText.match(/\/(\d+)/)?.[1]}` : ''))
+                                : ''
+                          }
                           placeholder={getScoreLabel(game.displayName)}
                           readOnly
                           style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
@@ -571,7 +611,13 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                             <input
                               type="text"
                               className="score-input-small"
-                              value={typeof additionalScore.value === 'number' ? `${additionalScore.value}${additionalScore.maxValue ? `/${additionalScore.maxValue}` : '%'}` : 'N/A'}
+                              value={
+                                typeof additionalScore.value === 'number' 
+                                  ? `${additionalScore.value}${additionalScore.maxValue ? `/${additionalScore.maxValue}` : '%'}` 
+                                  : typeof additionalScore.value === 'string'
+                                    ? additionalScore.value // For Wantedle grade (e.g., "B")
+                                    : 'N/A'
+                              }
                               placeholder={additionalScore.label}
                               title={`${additionalScore.label}${additionalScore.maxValue ? ` (max: ${additionalScore.maxValue})` : ''}`}
                               readOnly

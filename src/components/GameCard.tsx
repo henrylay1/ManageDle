@@ -71,10 +71,9 @@ function formatScore(record: GameRecord, game: Game): string {
   }
   
   if (game.displayName === 'Wantedle') {
-    const resultCode = record.failed ? 'D' : 'S';
-    // Convert milliseconds back to seconds for display
+    // Always display the time in seconds, never 'X' or any code
     const timeInSeconds = ((record.score ?? 0) / 1000).toFixed(1);
-    return `${resultCode} - ${timeInSeconds}s`;
+    return `${timeInSeconds}s`;
   }
   
   if (game.displayName === 'Pokedoku') {
