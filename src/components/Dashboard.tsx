@@ -88,26 +88,21 @@ export function TooltipWithArrow({
 
 // Backwards compatibility for existing onboarding tooltip
 function TooltipWithHoverOut({ onHide }: { onHide: () => void }) {
+  const [highlight, setHighlight] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setHighlight(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
   return (
-    <TooltipWithArrow onHide={onHide} message="Click to add" arrow="left" position="right" />
+    <TooltipWithArrow
+      onHide={onHide}
+      message="Click to add"
+      arrow="left"
+      position="right"
+      style={highlight ? { background: '#c00', color: '#fff', border: '2px solid #f33' } : {}}
+    />
   );
 }
-// --- Tooltip for first log of the day ---
-// Place this state at the top of Dashboard
-// const [showLogFirstGameTooltip, setShowLogFirstGameTooltip] = useState(false);
-
-      {/* Example: Render the log tooltip next to the log textarea when logging first game of the day */}
-      {/*
-      {showLogFirstGameTooltip && (
-        <TooltipWithArrow
-          onHide={() => setShowLogFirstGameTooltip(false)}
-          message="paste share text here"
-          arrow="right"
-          position="left"
-          style={{ left: '-280px', top: '50%', transform: 'translateY(-50%)' }}
-        />
-      )}
-      */}
 
 function Dashboard() {
   const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
@@ -352,26 +347,6 @@ function Dashboard() {
                     >
                       {game.isActive ? 'Remove' : 'Add to Dailies'}
                     </button>
-                    {onboardingActive && (
-                      <div style={{
-                        display: 'block',
-                        position: 'absolute',
-                        right: '-280px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: '#222',
-                        color: '#fff',
-                        padding: '12px 20px',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        zIndex: 1000,
-                      }}>
-                        👈 Click to add
-                      </div>
-                    )}
                   </div>
                 );
               })}

@@ -87,8 +87,28 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
         width: '100%',
         maxWidth: '28rem',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        color: 'black'
+        color: 'black',
+        position: 'relative',
       }}>
+        {/* Close (X) button top right */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            background: 'none',
+            border: 'none',
+            color: '#c00',
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            zIndex: 10,
+          }}
+          aria-label="Close"
+        >
+          ×
+        </button>
         <h2 className="text-2xl font-bold mb-4">Create Account</h2>
         
         {showMigrationInfo ? (
@@ -166,13 +186,13 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 </div>
               )}
 
-
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-blue-500 text-white py-1.5 px-3 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                style={{ fontSize: '1rem', marginTop: '0.5rem' }}
               >
-                {isLoading ? 'Creating account...' : 'Create Account'}
+                {isLoading ? 'Signing up...' : 'Sign Up'}
               </button>
             </form>
 
@@ -187,13 +207,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 </button>
               </p>
             </div>
-
-            <button
-              onClick={onClose}
-              className="mt-4 w-full text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
           </>
         )}
       </div>
