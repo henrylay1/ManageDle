@@ -207,6 +207,8 @@
 .game-status.active {
   background: #10b98144;
   color: #10b981;
+}
+
 @media (prefers-color-scheme: light) {
   .empty-state {
     background: #f9f9f9;
