@@ -490,7 +490,7 @@ function Dashboard() {
         />
       )}
 
-      {selectedGame && (
+      {selectedGame && showScoreEntry && (
         <ScoreEntryModal
           game={selectedGame}
           existingRecord={getTodayRecord(selectedGame.gameId)}
