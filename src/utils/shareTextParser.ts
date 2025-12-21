@@ -27,7 +27,7 @@ export interface ParsedShareText {
   maxGuessNumber?: number; // For Quordle: the highest numbered emoji found (e.g., 5 from 5️⃣)
   percentage?: number; // For Worldle: the proximity percentage (e.g., 80 from (80%))
   guessCount?: number; // For Worldle: the number of guesses used (separate from score which will be percentage)
-  additionalScores?: Array<{ label: string; value: string | number | undefined; maxValue: number | undefined }>; // Additional score fields (e.g., Accuracy for Colorfle, Grade for Wantedle)
+  additionalScores?: Array<{ label: string; value: number | string; maxValue?: number }>; // Additional score fields (e.g., Accuracy for Colorfle, Grade for Wantedle)
 }
 
 export interface LoLdleParsedResult {
