@@ -1,0 +1,266 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.dashboard-section {
+  animation: slideUp 0.4s ease-out;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.7em 1.5em;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-small {
+  padding: 0.4em 1em;
+  font-size: 0.9em;
+}
+
+.btn-edit {
+  background: #f59e0b;
+  min-width: auto;
+  padding: 0.4em 0.8em;
+}
+
+.btn-edit:hover {
+  background: #d97706;
+}
+
+.btn-leaderboard {
+  background: #f59e0b;
+}
+
+.btn-leaderboard:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-login {
+  background: white;
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+}
+
+.btn-login:hover {
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-signup {
+  background: #3b82f6;
+}
+
+.btn-signup:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-account {
+  background: #3b82f6;
+}
+
+.btn-account:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.offline-mode-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 2px dashed #333;
+}
+
+.empty-state p {
+  font-size: 1.2rem;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.category-section {
+  margin-bottom: 1.5rem;
+}
+
+.category-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 1rem;
+  background: #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-title:hover {
+  background: #333;
+}
+
+.category-title.expanded {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.category-toggle {
+  font-size: 0.9rem;
+  width: 20px;
+  display: inline-block;
+}
+
+.games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #1a1a1a;
+  border: 2px solid #2a2a2a;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.game-list-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.game-list-item:hover {
+  background: #252525;
+}
+
+.game-icon {
+  font-size: 1.5rem;
+}
+
+.game-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.game-status {
+  padding: 0.3em 0.8em;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.game-status.active {
+  background: #10b98144;
+  color: #10b981;
+@media (prefers-color-scheme: light) {
+  .empty-state {
+    background: #f9f9f9;
+    border-color: #e0e0e0;
+  }
+  
+  .category-title {
+    background: #f0f0f0;
+  }
+  
+  .category-title:hover {
+    background: #e5e5e5;
+  }
+  
+  .games-list {
+    background: #fafafa;
+    border-color: #e0e0e0;
+  }
+  
+  .game-list-item {
+    background: #ffffff;
+  }
+  
+  .game-list-item:hover {
+    background: #f9f9f9;
+  }
+}
+@media (prefers-color-scheme: light) {
+  .empty-state {
+    background: #f9f9f9;
+    border-color: #e0e0e0;
+  }
+  
+  .category-title {
+    border-bottom-color: #e0e0e0;
+  }
+  
+  .game-list-item {
+    background: #f9f9f9;
+  }
+  
+  .game-list-item:hover {
+    background: #f0f0f0;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
+}

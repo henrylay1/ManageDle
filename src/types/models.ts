@@ -1,0 +1,120 @@
+// Core data models for the ManageDle application
+
+/**
+ * Represents a wordle-style game that can be tracked
+ */
+export interface Game {
+  gameId: string; // Unique identifier (e.g., "wordle", "quordle")
+  displayName: string; // Display name (e.g., "Wordle")
+  url: string; // URL to the game
+  category: string; // Category (e.g., "word", "number", "geography")
+  trackingType: 'manual' | 'automatic'; // How scores are tracked
+  isActive: boolean; // Whether the game is in the user's active roster
+  isFailable: boolean; // Whether the game can be failed (e.g., Wordle can fail, Connections cannot)
+  addedAt: string; // ISO 8601 timestamp
+  icon?: string; // Optional emoji or icon
+  customData?: Record<string, unknown>; // Extensible metadata
+}
+
+/**
+ * Represents a subtask/share text within a game record
+ */
+export interface ShareTextEntry {
+  name: string; // Name of the subtask (e.g., "main", "classic", "quote")
+  shareText: string; // The emoji grid/share text
+  completed: boolean;
+  failed: boolean;
+  score?: number;
+  hardMode?: boolean;
+  additionalScores?: { label: string; value: number; maxValue?: number }[]; // For games with multiple score metrics (e.g., Pokedoku uniqueness)
+  // Parsed data from shareTextParser (stored once, read many times)
+  maxAttempts?: number; // Total attempts allowed (e.g., 6 for Wordle)
+  puzzleNumber?: string; // The puzzle number
+  grid?: string; // The emoji grid
+  maxGuessNumber?: number; // For Quordle: the highest numbered emoji found
+  percentage?: number; // For Worldle: the proximity percentage
+  guessCount?: number; // For Worldle: the number of guesses used
+  uniqueness?: number; // For Pokedoku: uniqueness score
+  maxUniqueness?: number; // For Pokedoku: max uniqueness value
+}
+
+/**
+ * Represents a single game play record for a specific date
+ */
+export interface GameRecord {
+  recordId: string; // UUID for sync conflict resolution
+  gameId: string; // References Game.gameId
+  localId: string; // Owner device/user identifier
+  userId?: string; // Backend user ID (populated after migration)
+  date: string; // YYYY-MM-DD format
+  completed: boolean; // Whether the game was completed
+  score?: number; // Score (e.g., 1-6 for Wordle attempts)
+  failed: boolean; // Whether the user failed to solve
+  timeSpent?: number; // Time in seconds
+  metadata?: {
+    hardMode?: boolean;
+    shareText?: string; // The emoji grid/share text (legacy, for single share text)
+    shareTexts?: ShareTextEntry[]; // Multiple share texts for games with subtasks
+    streakDay?: number;
+    notes?: string;
+    hasInvalidShareText?: boolean; // Flag to indicate share text doesn't match expected game format
+  };
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp (for sync conflict resolution)
+  syncStatus?: 'pending' | 'synced' | 'conflict'; // Future sync status
+}
+
+/**
+ * User/Device identity for local storage and future cloud sync
+ */
+export interface UserIdentity {
+  localId: string; // UUID generated on first use
+  userId?: string; // Backend user ID (added post-migration)
+  email?: string; // Email (added after account creation)
+  displayName?: string; // User's display name
+  createdAt: string; // ISO 8601 timestamp
+  lastSyncedAt?: string; // Last sync timestamp
+}
+
+/**
+ * Aggregated statistics for a specific game
+ */
+export interface GameStats {
+  gameId: string;
+  localId: string;
+  userId?: string;
+  totalPlayed: number;
+  totalWon: number;
+  totalFailed: number;
+  currentStreak: number;
+  maxStreak: number;
+  averageScore: number;
+  scoreDistribution: Record<string, number>; // {"1": 5, "2": 20, ...}
+  lastPlayedDate?: string; // YYYY-MM-DD
+  computedAt: string; // ISO 8601 timestamp
+}
+
+/**
+ * Schema version metadata for migrations
+ */
+export interface StorageMetadata {
+  schemaVersion: number;
+  migrations: string[]; // List of applied migration IDs
+  lastUpdated: string;
+}
+
+/**
+ * Query filter for storage operations
+ */
+export interface QueryFilter {
+  [key: string]: unknown;
+}
+
+/**
+ * Result of a sync operation
+ */
+export interface SyncResult {
+  success: boolean;
+  recordsSynced: number;
+  errors?: string[];
+}

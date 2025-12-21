@@ -1,0 +1,72 @@
+import { Game, GameRecord } from '@/types/models';
+import './RemoveModal.css';
+
+interface RemoveModalProps {
+  game: Game;
+  record: GameRecord | undefined;
+  onClose: () => void;
+  onRemoveGame: () => void;
+  onDeleteRecord: () => void;
+}
+
+function RemoveModal({ game, record, onClose, onRemoveGame, onDeleteRecord }: RemoveModalProps) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Remove "{game.displayName}"</h2>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        
+        <div className="modal-body">
+          <p>What would you like to do?</p>
+          
+          <div className="remove-options">
+            <button 
+              className="remove-option-btn remove-from-active"
+              onClick={() => {
+                onRemoveGame();
+                onClose();
+              }}
+            >
+              <span className="option-icon">🚫</span>
+              <div className="option-text">
+                <strong>Remove from Today's Games</strong>
+                <small>Keep in roster, just hide from today</small>
+              </div>
+            </button>
+            
+            {record && (
+              <button 
+                className="remove-option-btn delete-entry"
+                onClick={() => {
+                  onDeleteRecord();
+                  onClose();
+                }}
+              >
+                <span className="option-icon">🗑️</span>
+                <div className="option-text">
+                  <strong>Delete Today's Entry</strong>
+                  <small>Remove score, keep game active</small>
+                </div>
+              </button>
+            )}
+            
+            <button 
+              className="remove-option-btn cancel"
+              onClick={onClose}
+            >
+              <span className="option-icon">❌</span>
+              <div className="option-text">
+                <strong>Cancel</strong>
+                <small>Don't change anything</small>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RemoveModal;

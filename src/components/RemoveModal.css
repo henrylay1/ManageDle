@@ -1,0 +1,56 @@
+.remove-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.remove-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.remove-option-btn:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.remove-option-btn.cancel:hover {
+  border-color: var(--text-secondary);
+}
+
+.remove-option-btn.delete-entry:hover {
+  border-color: #e74c3c;
+}
+
+.option-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.option-text strong {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.option-text small {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

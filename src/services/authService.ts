@@ -1,0 +1,186 @@
+import { supabase } from '@/lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+export class AuthService {
+  /**
+   * Register a new user with email and password
+   */
+  async register(email: string, password: string, displayName?: string): Promise<AuthUser> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          display_name: displayName || email.split('@')[0],
+        },
+      },
+    });
+
+    if (error) {
+      // Check if user already exists in auth but not in public.users
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        // Try to get the existing user's ID from auth
+        const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if (signInData?.user) {
+          // User exists in auth, check if they exist in public.users
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', signInData.user.id)
+            .single();
+          
+          if (userError || !userData) {
+            // User in auth but not in public.users - create the profile
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert({
+                id: signInData.user.id,
+                email: signInData.user.email!,
+                display_name: displayName || email.split('@')[0],
+              });
+            
+            if (insertError) {
+              throw new Error(`Failed to create user profile: ${insertError.message}`);
+            }
+            
+            return {
+              id: signInData.user.id,
+              email: signInData.user.email!,
+              displayName: displayName || email.split('@')[0],
+            };
+          }
+        }
+      }
+      
+      throw new Error(`Registration failed: ${error.message}`);
+    }
+
+    if (!data.user) {
+      throw new Error('Registration failed: No user returned');
+    }
+
+    // Note: data.session may be null if email confirmation is required
+    // The trigger will still create the user profile
+
+    return this.mapUser(data.user);
+  }
+
+  /**
+   * Sign in with email and password
+   */
+  async login(email: string, password: string): Promise<AuthUser> {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw new Error(`Login failed: ${error.message}`);
+    }
+
+    if (!data.user) {
+      throw new Error('Login failed: No user returned');
+    }
+
+    return this.mapUser(data.user);
+  }
+
+  /**
+   * Sign out the current user
+   */
+  async logout(): Promise<void> {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(`Logout failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get the current session
+   */
+  async getSession(): Promise<Session | null> {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Failed to get session:', error);
+      return null;
+    }
+    return data.session;
+  }
+
+  /**
+   * Get the current user
+   */
+  async getCurrentUser(): Promise<AuthUser | null> {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      return null;
+    }
+    return this.mapUser(data.user);
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(displayName: string, avatarUrl?: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        display_name: displayName,
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      throw new Error(`Failed to update profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Subscribe to auth state changes
+   */
+  onAuthStateChange(callback: (user: AuthUser | null) => void) {
+    return supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        callback(this.mapUser(session.user));
+      } else {
+        callback(null);
+      }
+    });
+  }
+
+  /**
+   * Map Supabase User to AuthUser
+   */
+  private mapUser(user: User): AuthUser {
+    return {
+      id: user.id,
+      email: user.email!,
+      displayName: user.user_metadata?.display_name || user.email!.split('@')[0],
+      avatarUrl: user.user_metadata?.avatar_url || null,
+    };
+  }
+
+  /**
+   * Check if Supabase is configured
+   */
+  isConfigured(): boolean {
+    return !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+  }
+}
+
+export const authService = new AuthService();
