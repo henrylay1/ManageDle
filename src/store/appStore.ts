@@ -305,7 +305,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { games } = get();
     const newGames = [...games, game];
     const activeGames = newGames.filter(g => g.isActive);
-    set({ games: newGames, activeGames });
+    set({ games: newGames as Game[], activeGames: activeGames as Game[] });
 
     // Save to database in background
     try {

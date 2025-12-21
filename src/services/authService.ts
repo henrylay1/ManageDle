@@ -45,6 +45,7 @@ export class AuthService {
                 id: signInData.user.id,
                 email: signInData.user.email!,
                 display_name: displayName || email.split('@')[0],
+                avatar_url: null,
               });
             
             if (insertError) {
@@ -55,6 +56,7 @@ export class AuthService {
               id: signInData.user.id,
               email: signInData.user.email!,
               displayName: displayName || email.split('@')[0],
+              avatarUrl: null,
             };
           }
         }

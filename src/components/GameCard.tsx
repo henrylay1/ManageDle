@@ -110,10 +110,6 @@ function formatScore(record: GameRecord, game: Game): string {
   if (game.displayName === 'Gamedle') {
     // For multi-puzzle display, count solved puzzles out of 5
     if (record.metadata?.shareTexts && record.metadata.shareTexts.length > 1) {
-      // Count all subpuzzles that have been completed OR failed (both have shareText)
-      const completedCount = record.metadata.shareTexts.filter(st => 
-        st.completed || st.failed || (st.shareText && st.shareText.length > 0)
-      ).length;
       // Only count successful ones for the score display
       const solvedCount = record.metadata.shareTexts.filter(st => !st.failed && st.completed).length;
       return `${solvedCount}/5`;

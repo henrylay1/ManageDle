@@ -1,4 +1,5 @@
-import { QueryFilter, SyncResult } from './models';
+import type { QueryFilter, SyncResult } from './models';
+export type { QueryFilter, SyncResult } from './models';
 import type { Game, GameRecord } from './models';
 
 /**

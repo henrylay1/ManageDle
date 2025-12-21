@@ -181,8 +181,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.puzzleNumber = getCurrentDate();
     result.maxAttempts = 5;
     
-    const foundMatch = genshindleMatch[1].toLowerCase() === 'found';
-    
     // Extract emoji grid lines (lines with 🟪🟩🟥)
     const grid = extractEmojiGrid(lines, /[🟪🟩🟥]/);
     

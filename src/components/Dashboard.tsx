@@ -49,10 +49,10 @@ function Dashboard() {
     setShowStats(true);
   };
 
-  const handleEditGame = (game: Game) => {
-    setEditingGame(game);
-    setShowEditGame(true);
-  };
+  // const handleEditGame = (game: Game) => {
+  //   setEditingGame(game);
+  //   setShowEditGame(true);
+  // };
 
   const getTodayRecord = (gameId: string) => {
     return todayRecords.find(r => r.gameId === gameId);
