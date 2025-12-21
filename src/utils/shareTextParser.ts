@@ -27,7 +27,8 @@ export interface ParsedShareText {
   maxGuessNumber?: number; // For Quordle: the highest numbered emoji found (e.g., 5 from 5️⃣)
   percentage?: number; // For Worldle: the proximity percentage (e.g., 80 from (80%))
   guessCount?: number; // For Worldle: the number of guesses used (separate from score which will be percentage)
-  additionalScores?: Array<{ label: string; value: number | string; maxValue?: number }>; // Additional score fields (e.g., Accuracy for Colorfle, Grade for Wantedle)
+  grade?: string; // For Wantedle: letter grade (A-F)
+  additionalScores?: Array<{ label: string; value: number; maxValue?: number }>; // Additional score fields (e.g., Accuracy for Colorfle)
 }
 
 export interface LoLdleParsedResult {
@@ -136,12 +137,8 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.completed = true;
     // Fail if grade is C, D, E, F
     result.failed = /[C-F]/i.test(grade);
-    // Store grade in additionalScores for display
-    result.additionalScores = [{
-      label: 'Grade',
-      value: grade,
-      maxValue: undefined
-    }];
+    // Store grade as separate property
+    result.grade = grade;
     
     // Extract emoji (single emoji line)
     const emojiLines = lines.filter(line => {

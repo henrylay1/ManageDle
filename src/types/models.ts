@@ -36,6 +36,7 @@ export interface ShareTextEntry {
   guessCount?: number; // For Worldle: the number of guesses used
   uniqueness?: number; // For Pokedoku: uniqueness score
   maxUniqueness?: number; // For Pokedoku: max uniqueness value
+  grade?: string; // For Wantedle: letter grade (A-F)
 }
 
 /**

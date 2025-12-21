@@ -208,6 +208,12 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
                 </span>
                 <span className="score-value">{formatScore(record, game)}</span>
               </div>
+              {game.displayName === 'Wantedle' && record.metadata?.shareTexts?.[0]?.grade && (
+                <div className="score-display">
+                  <span className="score-label">Grade</span>
+                  <span className="score-value">{record.metadata.shareTexts[0].grade}</span>
+                </div>
+              )}
               {record.metadata?.shareTexts?.[0]?.additionalScores?.map((additionalScore, index) => (
                 <div key={index} className="score-display">
                   <span className="score-label">{additionalScore.label}</span>

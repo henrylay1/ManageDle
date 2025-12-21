@@ -309,7 +309,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             // For Wantedle, store grade and time separately
             if (game.displayName === 'Wantedle') {
               updated[index].score = fullParsed.score; // Time in milliseconds
-              updated[index].additionalScores = fullParsed.additionalScores || [];
+              updated[index].grade = fullParsed.grade;
             }
 
           }
