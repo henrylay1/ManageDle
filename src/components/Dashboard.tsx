@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import ReactTooltip from 'react-tooltip';
 import { useAppStore } from '@/store/appStore';
 import GameCard from './GameCard';
 import EditGameModal from './EditGameModal';
@@ -12,6 +13,101 @@ import { LeaderboardModal } from './LeaderboardModal';
 import { authService } from '@/services/authService';
 import { Game } from '@/types/models';
 import './Dashboard.css';
+
+// Reusable TooltipWithArrow component
+export function TooltipWithArrow({
+  onHide,
+  position = 'right',
+  message,
+  arrow = 'left',
+  style = {},
+}: {
+  onHide: () => void;
+  position?: 'right' | 'left';
+  message: string;
+  arrow?: 'left' | 'right';
+  style?: React.CSSProperties;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const arrowStyle = {
+    display: 'inline-block',
+    marginRight: arrow === 'left' ? 12 : 0,
+    marginLeft: arrow === 'right' ? 12 : 0,
+    fontSize: '2rem',
+    animation: arrow === 'right' ? 'arrowOscillateRight 1s infinite' : 'arrowOscillate 1s infinite',
+  };
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        position: 'absolute',
+        right: position === 'right' ? '-280px' : undefined,
+        left: position === 'left' ? '-280px' : undefined,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: '#222',
+        color: '#fff',
+        padding: '12px 20px',
+        borderRadius: '8px',
+        fontSize: '14px',
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        zIndex: 1000,
+        cursor: 'pointer',
+        ...style,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { if (hovered) onHide(); }}
+    >
+      {arrow === 'left' && <span style={arrowStyle}>&#8592;</span>}
+      {message}
+      {arrow === 'right' && <span style={arrowStyle}>&#8594;</span>}
+      <style>{`
+        @keyframes arrowOscillate {
+          0% { transform: translateX(0); }
+          20% { transform: translateX(-10px); }
+          40% { transform: translateX(0); }
+          60% { transform: translateX(-10px); }
+          80% { transform: translateX(0); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes arrowOscillateRight {
+          0% { transform: translateX(0); }
+          20% { transform: translateX(10px); }
+          40% { transform: translateX(0); }
+          60% { transform: translateX(10px); }
+          80% { transform: translateX(0); }
+          100% { transform: translateX(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Backwards compatibility for existing onboarding tooltip
+function TooltipWithHoverOut({ onHide }: { onHide: () => void }) {
+  return (
+    <TooltipWithArrow onHide={onHide} message="Click to add" arrow="left" position="right" />
+  );
+}
+// --- Tooltip for first log of the day ---
+// Place this state at the top of Dashboard
+// const [showLogFirstGameTooltip, setShowLogFirstGameTooltip] = useState(false);
+
+      {/* Example: Render the log tooltip next to the log textarea when logging first game of the day */}
+      {/*
+      {showLogFirstGameTooltip && (
+        <TooltipWithArrow
+          onHide={() => setShowLogFirstGameTooltip(false)}
+          message="paste share text here"
+          arrow="right"
+          position="left"
+          style={{ left: '-280px', top: '50%', transform: 'translateY(-50%)' }}
+        />
+      )}
+      */}
 
 function Dashboard() {
   const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
@@ -27,10 +123,21 @@ function Dashboard() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['academic']);
+  const [onboardingActive, setOnboardingActive] = useState(false);
+  const wordleAddBtnRef = useRef<HTMLButtonElement | null>(null);
   
   // Shared auth form state
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+
+  // Rebuild tooltip when onboarding becomes active
+  useEffect(() => {
+    if (onboardingActive) {
+      setTimeout(() => {
+        ReactTooltip.rebuild();
+      }, 100);
+    }
+  }, [onboardingActive]);
 
   const handlePlayGame = (game: Game) => {
     window.open(game.url, '_blank');
@@ -79,7 +186,7 @@ function Dashboard() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" style={{ position: 'relative' }}>
       <section className="dashboard-section">
         <div className="section-header">
           <h2>📅 Today's Games</h2>
@@ -137,7 +244,13 @@ function Dashboard() {
         {activeGames.length === 0 ? (
           <div className="empty-state">
             <p>No games in your roster yet!</p>
-            <button onClick={() => setShowAddGame(true)}>
+            <button
+              onClick={() => {
+                // Expand all categories and activate onboarding
+                setExpandedCategories(['academic', 'games', 'misc']);
+                setOnboardingActive(true);
+              }}
+            >
               Add your first game
             </button>
           </div>
@@ -183,8 +296,8 @@ function Dashboard() {
           </h3>
           {expandedCategories.includes('academic') && (
             <div className="games-list">
-              {games.filter(g => g.category === 'academic').map(game => (
-                <div key={game.gameId} className="game-list-item">
+              {games.filter(g => g.category === 'academic').map((game, idx) => (
+                <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
                   <span className="game-icon">{game.icon}</span>
                   <span className="game-name">{game.displayName}</span>
                   <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
@@ -192,10 +305,16 @@ function Dashboard() {
                   </span>
                   <button
                     className="btn-small"
-                    onClick={() => useAppStore.getState().toggleGameActive(game.gameId)}
+                    onClick={() => {
+                      useAppStore.getState().toggleGameActive(game.gameId);
+                      if (onboardingActive) setOnboardingActive(false);
+                    }}
                   >
                     {game.isActive ? 'Remove' : 'Add to Dailies'}
                   </button>
+                  {onboardingActive && idx === 0 && (
+                    <TooltipWithHoverOut onHide={() => setOnboardingActive(false)} />
+                  )}
                 </div>
               ))}
             </div>
@@ -215,21 +334,47 @@ function Dashboard() {
           </h3>
           {expandedCategories.includes('games') && (
             <div className="games-list">
-              {games.filter(g => g.category === 'games').map(game => (
-                <div key={game.gameId} className="game-list-item">
-                  <span className="game-icon">{game.icon}</span>
-                  <span className="game-name">{game.displayName}</span>
-                  <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
-                    {game.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  <button
-                    className="btn-small"
-                    onClick={() => useAppStore.getState().toggleGameActive(game.gameId)}
-                  >
-                    {game.isActive ? 'Remove' : 'Add to Dailies'}
-                  </button>
-                </div>
-              ))}
+              {games.filter(g => g.category === 'games').map(game => {
+                return (
+                  <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
+                    <span className="game-icon">{game.icon}</span>
+                    <span className="game-name">{game.displayName}</span>
+                    <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
+                      {game.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                    <button
+                      className="btn-small"
+                      ref={ onboardingActive ? wordleAddBtnRef : undefined}
+                      onClick={() => {
+                        useAppStore.getState().toggleGameActive(game.gameId);
+                        if (onboardingActive) setOnboardingActive(false);
+                      }}
+                    >
+                      {game.isActive ? 'Remove' : 'Add to Dailies'}
+                    </button>
+                    {onboardingActive && (
+                      <div style={{
+                        display: 'block',
+                        position: 'absolute',
+                        right: '-280px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: '#222',
+                        color: '#fff',
+                        padding: '12px 20px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        zIndex: 1000,
+                      }}>
+                        👈 Click to add
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -345,7 +490,7 @@ function Dashboard() {
         />
       )}
 
-      {showScoreEntry && selectedGame && (
+      {selectedGame && (
         <ScoreEntryModal
           game={selectedGame}
           existingRecord={getTodayRecord(selectedGame.gameId)}

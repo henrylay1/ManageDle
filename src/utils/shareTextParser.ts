@@ -116,7 +116,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
 
   // Wantedle
   if (normalizedGameName === 'wantedle') {
-    const wantedleMatch = text.match(/WANTEDLE\s+#([\d,]+)\s+-\s+(\w+)\s+([SD])\s+-\s+([\d.]+)s/i);
+    const wantedleMatch = text.match(/WANTEDLE\s+#([\d,]+)\s+-\s+(\w+)\s+([A-Z])\s+-\s+([\d.]+)s/i);
     if (!wantedleMatch) {
       throw new Error('❌ Incorrect share text for Wantedle. Expected format: "WANTEDLE #... - Hard/Easy S/D - n.ns..."');
     }

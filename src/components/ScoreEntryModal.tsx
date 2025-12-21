@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { TooltipWithArrow } from './Dashboard';
 import { useAppStore } from '@/store/appStore';
 import { Game, GameRecord, ShareTextEntry } from '@/types/models';
 import { getTodayDate } from '@/utils/helpers';
@@ -45,6 +47,7 @@ function getScoreLabel(gameName: string): string {
 function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps) {
   const { addRecord, updateRecord, loadTodayRecords } = useAppStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
   
   const hasMultipleShareTexts = game.customData?.hasMultipleShareTexts === true;
   
@@ -104,6 +107,19 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       textareaRef.current.focus();
     }
   }, []);
+
+  // Calculate tooltip position for portal rendering
+  useEffect(() => {
+    if (textareaRef.current) {
+      const rect = textareaRef.current.getBoundingClientRect();
+      setTooltipPos({
+        top: rect.top + window.scrollY + rect.height / 2,
+        left: rect.left + window.scrollX - 300, // 280px width + margin
+      });
+    } else {
+      setTooltipPos(null);
+    }
+  }, [textareaRef.current]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // If Enter is pressed without Shift, submit the form
@@ -336,6 +352,10 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Always show yellow highlight and warning on save/update
+    setHasValidationError(true);
+    setParseMessage('⚠️ Please check your share text format.');
+
     try {
       // Calculate overall completion status
       const allCompleted = shareTexts.every(st => st.completed);
@@ -364,7 +384,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         metadata: {
           hardMode: shareTexts.some(st => st.hardMode),
           shareTexts: shareTexts,
-          hasInvalidShareText: hasValidationError,
+          hasInvalidShareText: true,
         },
       };
 
@@ -392,7 +412,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
 
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal-content score-entry-modal">
+      <div className="modal-content score-entry-modal" style={{ position: 'relative' }}>
         <div className="modal-header">
           <h2>
             {game.icon} {existingRecord ? 'Edit' : 'Log'} Score - {game.displayName}
@@ -402,7 +422,8 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="score-entry-form">
+        <div style={{ position: 'relative' }}>
+          <form onSubmit={handleSubmit} className="score-entry-form">
           {(game.displayName === 'LoLdle' || game.displayName === 'Pokedle' || game.displayName === 'Gamedle') && (
             <div className="form-section input-mode-toggle">
               <label className="toggle-label">
@@ -563,23 +584,45 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                     )}
                   </div>
 
-                  <textarea
-                    ref={index === 0 ? textareaRef : undefined}
-                    value={entry.shareText}
-                    onChange={(e) => handleShareTextChange(index, e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onPaste={(e) => {
-                      const target = e.currentTarget;
-                      setTimeout(() => {
-                        if (target) {
-                          handleShareTextChange(index, target.value);
-                        }
-                      }, 10);
-                    }}
-                    placeholder="Paste share text here... Score will be auto-detected!"
-                    rows={4}
-                    className="share-text-area"
-                  />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <textarea
+                      ref={index === 0 ? textareaRef : undefined}
+                      value={entry.shareText}
+                      onChange={(e) => handleShareTextChange(index, e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onPaste={(e) => {
+                        const target = e.currentTarget;
+                        setTimeout(() => {
+                          if (target) {
+                            handleShareTextChange(index, target.value);
+                          }
+                        }, 10);
+                      }}
+                      placeholder="Paste share text here... Score will be auto-detected!"
+                      rows={4}
+                      className="share-text-area"
+                    />
+                    {/* TooltipWithArrow rendered via portal for robust visibility */}
+                    {index === 0 && tooltipPos && createPortal(
+                      <TooltipWithArrow
+                        onHide={() => {}}
+                        message="paste share text here"
+                        arrow="right"
+                        position="left"
+                        style={{
+                          position: 'absolute',
+                          left: tooltipPos.left,
+                          top: tooltipPos.top,
+                          transform: 'translateY(-50%)',
+                          pointerEvents: 'none',
+                          zIndex: 3000,
+                          background: '#222',
+                          minWidth: 220,
+                        }}
+                      />,
+                      document.body
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -603,7 +646,9 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               {isSubmitting ? 'Saving...' : existingRecord ? 'Update' : 'Save'}
             </button>
           </div>
-        </form>
+          </form>
+          {/* TooltipWithArrow now rendered next to textarea above */}
+        </div>
       </div>
     </div>
   );
