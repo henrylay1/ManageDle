@@ -142,14 +142,13 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           const score = loldleParsed.modes[modeName as keyof typeof loldleParsed.modes];
           return {
             name: modeName,
-            shareText: '',
+            shareText: score !== undefined ? '(parsed from summary)' : '',
             completed: score !== undefined,
             failed: false,
             score: score,
             hardMode: false,
           };
         });
-        
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all LoLdle modes from summary');
         setTimeout(() => setParseMessage(''), 3000);
@@ -165,14 +164,13 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           const score = pokedleParsed.modes[modeName as keyof typeof pokedleParsed.modes];
           return {
             name: modeName,
-            shareText: '',
+            shareText: score !== undefined ? '(parsed from summary)' : '',
             completed: score !== undefined,
             failed: false,
             score: score,
             hardMode: false,
           };
         });
-        
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all Pokedle modes from summary');
         setTimeout(() => setParseMessage(''), 3000);

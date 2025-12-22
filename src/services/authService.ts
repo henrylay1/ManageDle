@@ -51,6 +51,23 @@ export class AuthService {
             if (insertError) {
               throw new Error(`Failed to create user profile: ${insertError.message}`);
             }
+
+            // Create default user_profile_config
+            const { error: configError } = await supabase
+              .from('user_profile_config')
+              .insert({
+                user_id: signInData.user.id,
+                display_name: displayName || email.split('@')[0],
+                avatar_url: null,
+                theme: 'light',
+                notifications_enabled: true,
+                active_games: [],
+              });
+
+            if (configError) {
+              console.error('Failed to create user profile config:', configError);
+              // Don't throw - profile config is not critical for auth
+            }
             
             return {
               id: signInData.user.id,
@@ -71,6 +88,23 @@ export class AuthService {
 
     // Note: data.session may be null if email confirmation is required
     // The trigger will still create the user profile
+
+    // Create default user_profile_config
+    const { error: configError } = await supabase
+      .from('user_profile_config')
+      .insert({
+        user_id: data.user.id,
+        display_name: displayName || email.split('@')[0],
+        avatar_url: null,
+        theme: 'light',
+        notifications_enabled: true,
+        active_games: [],
+      });
+
+    if (configError) {
+      console.error('Failed to create user profile config:', configError);
+      // Don't throw - profile config is not critical for auth
+    }
 
     return this.mapUser(data.user);
   }

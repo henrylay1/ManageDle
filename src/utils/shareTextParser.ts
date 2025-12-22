@@ -678,6 +678,17 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       result.maxUniqueness = parseInt(uniquenessMatch[2], 10);
     }
     
+    // Extract the grid (3x3 matrix of ✅ and 🟥)
+    const gridPattern = /((?:(?:✅|🟥)\s*)+(?:\n(?:(?:✅|🟥)\s*)+){2})/;
+    const gridMatch = text.match(gridPattern);
+    if (gridMatch) {
+      const gridLines = gridMatch[1]
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+      result.grid = gridLines.join('\n');
+    }
+    
     result.completed = true;
     result.failed = false;
     

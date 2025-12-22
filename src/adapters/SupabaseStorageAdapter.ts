@@ -54,7 +54,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
   }
 
   async clear(): Promise<void> {
-    // Clear all user data
+    // Clear all user data from Supabase
     await supabase.from('games').delete().eq('user_id', this.userId);
     await supabase.from('game_records').delete().eq('user_id', this.userId);
   }
@@ -62,66 +62,53 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
   // ========== GAMES ==========
 
   async getGames(): Promise<Game[]> {
-    const { data, error } = await supabase
+    // Fetch all games (global table, no user_id filter)
+    const { data: gamesData, error: gamesError } = await supabase
       .from('games')
       .select('*')
-      .eq('user_id', this.userId)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Failed to fetch games:', error);
+    if (gamesError) {
+      console.error('Failed to fetch games:', gamesError);
       return [];
     }
 
-    return (data || []).map(game => this.mapDbGameToGame(game));
+    // Fetch user's active games configuration
+    const { data: configData, error: configError } = await supabase
+      .from('user_profile_config')
+      .select('active_games')
+      .eq('user_id', this.userId)
+      .single();
+
+    if (configError) {
+      console.error('Failed to fetch user profile config:', configError);
+    }
+
+    const activeGames = (configData?.active_games as string[]) || [];
+
+    return (gamesData || []).map(game => this.mapDbGameToGame(game, activeGames));
   }
 
   async saveGames(games: Game[]): Promise<void> {
-    if (!this.userId) {
-      throw new Error('User must be authenticated to save games');
-    }
-
     try {
-      // Delete all existing games for this user
-      const { error: deleteError } = await supabase
-        .from('games')
-        .delete()
-        .eq('user_id', this.userId);
-
-      if (deleteError) throw deleteError;
-
-      // Insert all games
-      const gamesToInsert = games.map(game => {
-        // Extract category, url, etc. from the game object, NOT from customData
-        const fullCustomData = {
-          ...game.customData,
-          url: game.url,
-          category: game.category, // Use game.category directly
-          trackingType: game.trackingType,
-          isActive: game.isActive,
-          isFailable: game.isFailable,
-        };
-
+      // Upsert games (insert or update by primary key)
+      const gamesToUpsert = games.map(game => {
         return {
           game_id: game.gameId,
-          user_id: this.userId!,
           name: game.displayName,
           icon: game.icon,
-          color: game.customData?.color || '#3B82F6',
-          url: game.url, // Save to column
-          category: game.category, // Save to column - use game.category directly!
-          tracking_type: game.trackingType, // Save to column
-          is_active: game.isActive, // Save to column
-          is_failable: game.isFailable, // Save to column
-          custom_data: fullCustomData,
+          url: game.url,
+          category: game.category,
+          tracking_type: game.trackingType,
+          is_failable: game.isFailable,
         };
       });
 
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('games')
-        .insert(gamesToInsert);
+        .upsert(gamesToUpsert, { onConflict: 'game_id' });
 
-      if (insertError) throw insertError;
+      if (upsertError) throw upsertError;
     } catch (error) {
       console.error('[SupabaseAdapter] Error saving games:', error);
       throw new Error(`Failed to save games: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -141,6 +128,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       console.error('Failed to fetch records:', error);
       return [];
     }
+    console.log((data || []).map(record => this.mapDbRecordToRecord(record)));
 
     return (data || []).map(record => this.mapDbRecordToRecord(record));
   }
@@ -184,12 +172,17 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
 
   // ========== MAPPING HELPERS ==========
 
-  private mapDbGameToGame(dbGame: any): Game {
+  private mapDbGameToGame(dbGame: any, activeGames?: string[]): Game {
     // Try new schema first, fall back to custom_data if columns don't exist
     const storedCustomData = dbGame.custom_data || {};
     
     // Extract the actual customData (without our internal storage fields)
     const { url: _, category: __, trackingType: ___, isActive: ____, isFailable: _____, ...actualCustomData } = storedCustomData;
+    
+    // Determine isActive: if game_id is in the activeGames array, it's active
+    const isActive = activeGames 
+      ? activeGames.includes(dbGame.game_id)
+      : (dbGame.is_active !== undefined ? dbGame.is_active : (storedCustomData.isActive || false));
     
     return {
       gameId: dbGame.game_id,
@@ -197,7 +190,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       url: dbGame.url || storedCustomData.url || '',
       category: dbGame.category || storedCustomData.category || 'custom',
       trackingType: dbGame.tracking_type || storedCustomData.trackingType || 'manual',
-      isActive: dbGame.is_active !== undefined ? dbGame.is_active : (storedCustomData.isActive || false),
+      isActive,
       isFailable: dbGame.is_failable !== undefined ? dbGame.is_failable : (storedCustomData.isFailable !== undefined ? storedCustomData.isFailable : true),
       addedAt: dbGame.created_at,
       icon: dbGame.icon || '',

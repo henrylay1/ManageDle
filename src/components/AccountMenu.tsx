@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
+import { PfpOverlay } from './PfpOverlay';
+import './GameCard.css';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -8,7 +10,7 @@ interface AccountMenuProps {
 
 export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showPfpOverlay, setShowPfpOverlay] = useState(false);
   
   const authUser = useAppStore(state => state.authUser);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -18,11 +20,8 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
   // Use emoji from authUser.avatarUrl or default to smile
   const [selectedEmoji, setSelectedEmoji] = useState(authUser?.avatarUrl || '😊');
 
-  const availableEmojis = ['😊', '😢', '😭', '😎', '🤓', '😴', '🤔', '😂', '🥳', '😍'];
-
   const handleEmojiSelect = async (emoji: string) => {
     setSelectedEmoji(emoji);
-    setShowEmojiPicker(false);
     
     if (authUser) {
       try {
@@ -47,6 +46,18 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen || !isAuthenticated || !authUser) return null;
 
+  // Show PfpOverlay instead of AccountMenu when pfp overlay is active
+  if (showPfpOverlay) {
+    return (
+      <PfpOverlay
+        onBackToMenu={() => setShowPfpOverlay(false)}
+        onCloseAll={onClose}
+        onEmojiSelect={handleEmojiSelect}
+        currentEmoji={selectedEmoji}
+      />
+    );
+  }
+
   return (
     <div style={{
       position: 'fixed',
@@ -67,34 +78,34 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
         width: '100%',
         maxWidth: '28rem',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        color: 'black'
+        color: 'black',
+        position: 'relative',
       }} onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={onClose}
+          className="btn-remove-game"
+          style={{
+            position: 'absolute',
+            top: '1.5rem',
+            right: '1.5rem',
+          }}
+          title="Close"
+        >
+          ❌
+        </button>
+
         <h2 className="text-2xl font-bold mb-4">Account</h2>
         
         <div className="mb-6">
           <div className="flex items-center mb-4">
             <div className="relative mr-4">
               <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={() => setShowPfpOverlay(true)}
                 className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl hover:opacity-80 transition-opacity cursor-pointer"
                 title="Click to change profile picture"
               >
                 {selectedEmoji}
               </button>
-              
-              {showEmojiPicker && (
-                <div className="absolute top-full left-0 mt-2 p-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 grid grid-cols-5 gap-2">
-                  {availableEmojis.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleEmojiSelect(emoji)}
-                      className="w-10 h-10 text-2xl hover:bg-gray-100 rounded transition-colors flex items-center justify-center"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             
             <div>
@@ -113,16 +124,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="w-full bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed mb-2"
+          className="w-full bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {isLoggingOut ? 'Logging out...' : 'Log Out'}
-        </button>
-
-        <button
-          onClick={onClose}
-          className="w-full text-gray-600 hover:text-gray-800"
-        >
-          Close
         </button>
       </div>
     </div>

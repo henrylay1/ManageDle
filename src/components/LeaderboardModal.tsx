@@ -38,11 +38,41 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
     try {
       if (selectedGame === 'all') {
         const allLeaderboards = await leaderboardService.getAllGamesLeaderboard(50);
-        // Flatten and combine all entries
-        const combined = allLeaderboards.flatMap(lb => lb.entries);
-        // Sort by total wins
-        combined.sort((a, b) => b.totalWins - a.totalWins);
-        setLeaderboard(combined.slice(0, 100));
+        // Aggregate by userId across all games
+        const userMap = new Map<string, LeaderboardEntry>();
+        for (const lb of allLeaderboards) {
+          for (const entry of lb.entries) {
+            if (!userMap.has(entry.userId)) {
+              userMap.set(entry.userId, { ...entry });
+            } else {
+              const agg = userMap.get(entry.userId)!;
+              agg.totalWins += entry.totalWins;
+              agg.totalPlayed += entry.totalPlayed;
+              agg.winRate = agg.totalPlayed > 0 ? (agg.totalWins / agg.totalPlayed) * 100 : 0;
+              agg.currentStreak = Math.max(agg.currentStreak, entry.currentStreak);
+              agg.maxStreak = Math.max(agg.maxStreak, entry.maxStreak);
+              // For averageScore, combine scores if available
+              if (agg.averageScore !== null && entry.averageScore !== null) {
+                agg.averageScore = (agg.averageScore + entry.averageScore) / 2;
+              } else if (entry.averageScore !== null) {
+                agg.averageScore = entry.averageScore;
+              }
+              // For lastPlayed, use the most recent
+              if (entry.lastPlayed > agg.lastPlayed) {
+                agg.lastPlayed = entry.lastPlayed;
+              }
+            }
+          }
+        }
+        // Convert to array and sort by totalWins, then winRate
+        const aggregated = Array.from(userMap.values());
+        aggregated.sort((a, b) => {
+          if (b.totalWins !== a.totalWins) {
+            return b.totalWins - a.totalWins;
+          }
+          return b.winRate - a.winRate;
+        });
+        setLeaderboard(aggregated.slice(0, 100));
       } else {
         const entries = await leaderboardService.getGameLeaderboard(selectedGame, 100);
         setLeaderboard(entries);

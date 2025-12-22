@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAppStore } from '@/store/appStore';
 
 interface UserGameStats {
   gameId: string;
   gameName: string;
-  completions: number;
+  wins: number;
+  plays: number;
   icon: string;
 }
 
@@ -27,7 +27,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [gameStats, setGameStats] = useState<UserGameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const games = useAppStore(state => state.games);
+  // ...existing code...
 
   useEffect(() => {
     if (isOpen) {
@@ -40,45 +40,48 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setError('');
 
     try {
-      // Fetch all completed games for this user
-      const { data, error: fetchError } = await supabase
-        .from('game_records')
-        .select('game_id, completed')
-        .eq('user_id', userId)
-        .eq('completed', true);
+      // Fetch user stats from user_game_stats
+      console.debug('[UserProfileModal] Loading profile for userId:', userId);
+      const { data: statsData, error: statsError } = await supabase
+        .from('user_game_stats')
+        .select('game_id, total_wins, total_played')
+        .eq('user_id', userId);
 
-      if (fetchError) {
-        console.error('Failed to fetch user profile:', fetchError);
+      if (statsError) {
+        console.error('Failed to fetch user profile:', statsError);
         setError('Failed to load user profile');
         return;
       }
 
-      // Count completions per game
-      const statsMap = new Map<string, number>();
-      data?.forEach(record => {
-        const count = statsMap.get(record.game_id) || 0;
-        statsMap.set(record.game_id, count + 1);
-      });
+      // Fetch all games metadata from Supabase
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select('game_id, name, icon');
+
+      if (gamesError) {
+        console.error('Failed to fetch games metadata:', gamesError);
+        setError('Failed to load games metadata');
+        return;
+      }
 
       // Build the stats with game info
       const stats: UserGameStats[] = [];
-      games.forEach(game => {
-        const completions = statsMap.get(game.gameId) || 0;
-        if (completions > 0) {
-          stats.push({
-            gameId: game.gameId,
-            gameName: game.displayName,
-            completions,
-            icon: game.icon || '🎮',
-          });
-        }
+      statsData?.forEach(statRow => {
+        const game = gamesData?.find(g => g.game_id === statRow.game_id);
+        stats.push({
+          gameId: statRow.game_id,
+          gameName: game?.name || statRow.game_id,
+          wins: statRow.total_wins,
+          plays: statRow.total_played,
+          icon: game?.icon || '🎮',
+        });
       });
 
-      // Sort by completions (highest first)
-      stats.sort((a, b) => b.completions - a.completions);
+      // Sort by plays (highest first)
+      stats.sort((a, b) => b.plays - a.plays);
       setGameStats(stats);
     } catch (err) {
-      console.error(err);
+      console.error('[UserProfileModal] Error loading user profile:', err);
       setError('Failed to load user profile');
     } finally {
       setIsLoading(false);
@@ -141,11 +144,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           ) : gameStats.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No completed puzzles yet.</p>
+              <p>No games played yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              <h3 className="font-semibold text-lg mb-4">Completed Puzzles</h3>
+              <h3 className="font-semibold text-lg mb-4">Game Statistics</h3>
               {gameStats.map(stat => (
                 <div
                   key={stat.gameId}
@@ -155,9 +158,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <span className="text-2xl">{stat.icon}</span>
                     <span className="font-medium">{stat.gameName}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600 text-sm">Completed:</span>
-                    <span className="font-bold text-lg">{stat.completions}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="text-gray-600 text-sm">Wins:</span>
+                      <span className="font-bold text-lg ml-2">{stat.wins}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-600 text-sm">Plays:</span>
+                      <span className="font-bold text-lg ml-2">{stat.plays}</span>
+                    </div>
                   </div>
                 </div>
               ))}
