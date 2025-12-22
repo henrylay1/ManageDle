@@ -227,9 +227,6 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
                   </span>
                 </div>
               ))}
-              {record.metadata?.hardMode && (
-                <span className="hard-mode-badge">🔥 Hard Mode</span>
-              )}
             </div>
             
             {/* Display share texts */}
@@ -278,82 +275,27 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
                   );
                 })}
               </div>
-            ) : record.metadata?.shareTexts && record.metadata.shareTexts.length === 1 && record.metadata.shareTexts[0].shareText ? (
-              /* Single share text - show parsed format for fixed puzzles, original for custom */
+            ) : record.metadata?.shareTexts && record.metadata.shareTexts.length === 1 && (
+              /* Single share text - show emoji grid if present, else fallback to shareText */
               (() => {
                 const entry = record.metadata.shareTexts[0];
-                const isFixedPuzzle = game.category === 'academic' || game.category === 'games' || game.category === 'misc';
-
-                // ColorGuesser: only show puzzle number, no grid
-                if (game.displayName === 'Colorguesser' && entry.puzzleNumber) {
-                  return (
-                    <div className="share-text-preview">
-                      <div className="share-text-line puzzle-number">
-                        #{entry.puzzleNumber}
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Timingle: only show puzzle number, no grid
-                if (game.displayName === 'Timingle' && entry.puzzleNumber) {
-                  return (
-                    <div className="share-text-preview">
-                      <div className="share-text-line puzzle-number">
-                        #{entry.puzzleNumber}
-                      </div>
-                    </div>
-                  );
-                }
-
-                // r34dle: only show puzzle number and emoji grid
-                if (game.displayName === 'r34dle' && entry.puzzleNumber) {
-                  const gridLines = entry.grid ? entry.grid.split('\n').map(line => line.trim()).filter(line => line.length > 0) : [];
-                  return (
-                    <div className="share-text-preview">
-                      <div className="share-text-line puzzle-number">
-                        #{entry.puzzleNumber}
-                      </div>
-                      {gridLines.map((line, i) => (
-                        <div key={i} className="share-text-line">{line}</div>
-                      ))}
-                    </div>
-                  );
-                }
-
-                if (isFixedPuzzle && entry.grid) {
-                  // Grid is already parsed and filtered by shareTextParser
-                  const gridLines = entry.grid.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                  return (
-                    <div className="share-text-preview">
-                      {entry.puzzleNumber && (
-                        <div className="share-text-line puzzle-number">
-                          #{entry.puzzleNumber}
-                        </div>
-                      )}
-                      {gridLines.map((line, i) => (
-                        <div key={i} className="share-text-line">{line}</div>
-                      ))}
-                    </div>
-                  );
-                }
-                
-                // Fall back to showing raw text for misc games or if no grid was parsed
+                const gridLines = entry.grid ? entry.grid.split('\n').map(line => line.trim()).filter(line => line.length > 0) : null;
                 return (
                   <div className="share-text-preview">
-                    {entry.shareText.split('\n').slice(0, 10).map((line, i) => (
+                    {entry.puzzleNumber && (
+                      <div className="share-text-line puzzle-number">
+                        #{entry.puzzleNumber}
+                      </div>
+                    )}
+                    {gridLines && gridLines.length > 0 && gridLines.map((line, i) => (
+                      <div key={i} className="share-text-line">{line}</div>
+                    ))}
+                    {!gridLines && entry.shareText && entry.shareText.split('\n').slice(0, 10).map((line, i) => (
                       <div key={i} className="share-text-line">{line}</div>
                     ))}
                   </div>
                 );
               })()
-            ) : record.metadata?.shareText && (
-              /* Legacy single share text display */
-              <div className="share-text-preview">
-                {record.metadata.shareText.split('\n').slice(0, 10).map((line, i) => (
-                  <div key={i} className="share-text-line">{line}</div>
-                ))}
-              </div>
             )}
           </>
         ) : (

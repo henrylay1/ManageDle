@@ -48,22 +48,14 @@ export class GameRepository {
   }
 
   /**
-   * Get all active games (in user's roster)
-   */
-  async getActiveGames(): Promise<Game[]> {
-    const games = await this.getAll();
-    return games.filter(g => g.isActive);
-  }
-
-  /**
    * Add a new game
    */
-  async add(game: Omit<Game, 'gameId' | 'addedAt'>): Promise<Game> {
+  async add(game: Omit<Game, 'gameId' | 'addedAt'> | Game): Promise<Game> {
     const games = await this.getAll();
     
     const newGame: Game = {
       ...game,
-      gameId: generateUUID(),
+      gameId: ('gameId' in game && game.gameId) ? game.gameId : generateUUID(),
       addedAt: getTimestamp(),
     };
 
@@ -119,6 +111,7 @@ export class GameRepository {
 
   /**
    * Add default games (for first-time setup)
+   * Fetches games from the database to ensure consistent game_ids everywhere
    */
   async addDefaultGames(): Promise<void> {
     const existingGames = await this.getAll();
@@ -131,196 +124,36 @@ export class GameRepository {
       await this.delete(oldGame.gameId);
     }
 
-    const defaultGames = [
-      // Academic
-      {
-        displayName: 'Wordle',
-        url: 'https://www.nytimes.com/games/wordle/index.html',
-        category: 'academic',
-        trackingType: 'manual' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '📝',
-      },
-      {
-        displayName: 'Connections',
-        url: 'https://www.nytimes.com/games/connections',
-        category: 'academic',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🔗',
-      },
-      {
-        displayName: 'Quordle',
-        url: 'https://www.quordle.com/',
-        category: 'academic',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '4️⃣',
-      },
-      {
-        displayName: 'Worldle',
-        url: 'https://worldle.teuteuf.fr/',
-        category: 'academic',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🌍',
-      },
-      {
-        displayName: 'Nerdle',
-        url: 'https://nerdlegame.com/',
-        category: 'academic',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🔢',
-      },
-      // Games
-      {
-        displayName: 'LoLdle',
-        url: 'https://loldle.net/',
-        category: 'games',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: false,
-        icon: '😂',
-        customData: { 
-          hasMultipleShareTexts: true,
-          defaultShareTexts: ['Classic', 'Quote', 'Ability', 'Emoji', 'Splash']
-        },
-      },
-      {
-        displayName: 'Pokedle',
-        url: 'https://pokedle.net/',
-        category: 'games',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '⚡',
-        customData: {
-          hasMultipleShareTexts: true,
-          defaultShareTexts: ['Classic', 'Card', 'Description', 'Silhouette']
-        },
-      },
-      {
-        displayName: 'Pokedoku',
-        url: 'https://pokedoku.com/',
-        category: 'games',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: false,
-        icon: '🔴',
-      },
-      // Misc
-      {
-        displayName: 'Colorfle',
-        url: 'https://colorfle.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🎨',
-      },
-      {
-        displayName: 'Hexcodle',
-        url: 'https://hexcodle.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🔵',
-      },
-      {
-        displayName: 'Colorguesser',
-        url: 'https://colorguesser.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🌈',
-      },
-      {
-        displayName: 'Timingle',
-        url: 'https://timingle.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '⏰',
-      },
-      {
-        displayName: 'Spellcheck',
-        url: 'https://spellcheckgame.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '✨',
-      },
-      {
-        displayName: 'Scrandle',
-        url: 'https://scrandle.com/',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🍔',
-      },
-      {
-            displayName: 'r34dle',
-            url: 'https://www.rule34dle.org/en/daily',
-            category: 'misc',
-            trackingType: 'automatic' as const,
-            isActive: false,
-            isFailable: true,
-            icon: '🦄',
-          },
-      {
-        displayName: 'Angle',
-        url: 'https://www.angle.wtf',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '📐',
-          },
-      {
-        displayName: 'Wantedle',
-        url: 'https://www.wantedle.com',
-        category: 'misc',
-        trackingType: 'automatic' as const,
-        isActive: false,
-        isFailable: true,
-        icon: '🐡',
-          },
-      {
-            displayName: 'Gamedle',
-            url: 'https://gamedle.wtf',
-            category: 'games',
-            trackingType: 'automatic' as const,
-            isActive: false,
-            isFailable: true,
-            icon: '🕹️',
-          },
-      {
-            displayName: 'Genshindle',
-            url: 'https://genshindle.com',
-            category: 'games',
-            trackingType: 'automatic' as const,
-            isActive: false,
-            isFailable: true,
-            icon: '🎮',
-          },
-    ];
-
-    // Only add games that don't already exist
-    for (const game of defaultGames) {
-      const exists = existingGames.some(g => g.displayName === game.displayName);
-      if (!exists) {
-        await this.add(game);
+    // If using Supabase storage, games are already fetched from database via getAll()
+    // For local storage, we need to fetch from database to get the correct game_ids
+    if (existingGames.length === 0) {
+      // Fetch games from database to get their game_ids
+      const { supabase } = await import('@/lib/supabase');
+      const { data: dbGames, error } = await supabase
+        .from('games')
+        .select('*');
+      
+      if (error) {
+        console.error('Failed to fetch games from database:', error);
+        return;
+      }
+      
+      if (dbGames && dbGames.length > 0) {
+        // Store games locally with the database game_ids
+        const gamesToAdd: Game[] = dbGames.map(dbGame => ({
+          gameId: dbGame.game_id,
+          displayName: dbGame.name,
+          url: dbGame.url,
+          category: dbGame.category,
+          trackingType: dbGame.tracking_type,
+          isActive: false, // Default to inactive for new users
+          isFailable: dbGame.is_failable,
+          icon: dbGame.icon,
+          customData: dbGame.custom_data || undefined,
+          addedAt: new Date().toISOString(),
+        }));
+        
+        await this.storage.setAll('games', gamesToAdd);
       }
     }
   }

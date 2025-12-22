@@ -10,57 +10,12 @@ import { authService, type AuthUser } from '@/services/authService';
 import { supabase } from '@/lib/supabase';
 import type { IStorageAdapter } from '@/types/storage';
 
-// Initialize local storage (always available)
+// Initialize local storage (only for user and records, NOT games)
 const localStorage = new LocalStorageAdapter('managedle');
 const userRepo = new UserRepository(localStorage);
-let gameRepo = new GameRepository(localStorage);
 
-/**
- * Merge locally cached active games into user's profile config
- */
-async function mergeLocalActiveGamesIntoProfile(userId: string): Promise<void> {
-  try {
-    // Get locally cached games
-    const localGamesData = window.localStorage.getItem('managedle:games');
-    const localGames: Game[] = localGamesData ? JSON.parse(localGamesData) : [];
-    
-    // Filter for active games and get their IDs
-    const localActiveGameIds = localGames
-      .filter(g => g.isActive)
-      .map(g => g.gameId);
-    
-    if (localActiveGameIds.length === 0) return; // Nothing to merge
-    
-    // Get user's current active_games from profile config
-    const { data: configData, error: configError } = await supabase
-      .from('user_profile_config')
-      .select('active_games')
-      .eq('user_id', userId)
-      .single();
-    
-    if (configError && configError.code !== 'PGRST116') {
-      console.error('Failed to fetch user profile config:', configError);
-      return;
-    }
-    
-    const currentActiveGames = (configData?.active_games as string[]) || [];
-    
-    // Merge sets: use Set to avoid duplicates, then convert back to array
-    const mergedActiveGames = Array.from(new Set([...currentActiveGames, ...localActiveGameIds]));
-    
-    // Update user's profile config with merged active_games
-    const { error: updateError } = await supabase
-      .from('user_profile_config')
-      .update({ active_games: mergedActiveGames })
-      .eq('user_id', userId);
-    
-    if (updateError) {
-      console.error('Failed to update user profile config with merged active games:', updateError);
-    }
-  } catch (error) {
-    console.error('Error merging local active games into profile:', error);
-  }
-}
+// Game repository always uses database
+let gameRepo = new GameRepository(new SupabaseStorageAdapter('guest'));
 
 /**
  * Merge locally cached game records into user's Supabase records
@@ -91,7 +46,7 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       existingRecordsMap.set(key, record);
     });
     
-    // Filter out records that already exist for this user
+    // Filter out records that already exist
     const newRecords = localRecords.filter(record => {
       const key = `${record.gameId}:${record.date}`;
       return !existingRecordsMap.has(key);
@@ -101,29 +56,49 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       return;
     }
     
+    // Get active game IDs from local records to merge into user_profile_config
+    const localActiveGameIds = Array.from(new Set(localRecords.map(r => r.gameId)));
+    
+    if (localActiveGameIds.length > 0) {
+      const { data: configData } = await supabase
+        .from('user_profile_config')
+        .select('active_games')
+        .eq('user_id', userId)
+        .single();
+      
+      const currentActiveGames = (configData?.active_games as string[]) || [];
+      const mergedActiveGames = Array.from(new Set([...currentActiveGames, ...localActiveGameIds]));
+      
+      await supabase
+        .from('user_profile_config')
+        .update({ active_games: mergedActiveGames })
+        .eq('user_id', userId);
+    }
+    
     // Transform and insert new records
-    const dbRecords = newRecords.map(record => {
-      console.debug('[DEBUG] Merging local record to account:', {
-        gameId: record.gameId,
-        date: record.date,
-        score: record.score,
-        completed: record.completed,
-        failed: record.failed,
-        metadata: record.metadata
-      });
-      return {
-        record_id: record.recordId,
-        user_id: userId,
-        game_id: record.gameId,
-        date: record.date,
-        score: record.score ?? null,
-        completed: record.completed,
-        failed: record.failed,
-        hard_mode: record.metadata?.hardMode || false,
-        share_text: record.metadata?.shareText || null,
-        metadata: record.metadata || null,
-      };
-    });
+    const dbRecords = newRecords.map(record => ({
+      record_id: record.recordId,
+      user_id: userId,
+      game_id: record.gameId,
+      date: record.date,
+      score: record.score ?? null,
+      completed: record.completed,
+      failed: record.failed,
+      share_text: (() => {
+        if (record.metadata && Array.isArray(record.metadata.shareTexts) && record.metadata.shareTexts.length > 0) {
+          return record.metadata.shareTexts[0].shareText || null;
+        }
+        return null;
+      })(),
+      metadata: (() => {
+        if (!record.metadata) return null;
+        const cleaned = { ...record.metadata };
+        if (Array.isArray(cleaned.shareTexts)) {
+          cleaned.shareTexts = cleaned.shareTexts.map(({ shareText, ...rest }) => rest);
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : null;
+      })(),
+    }));
     
     const { error: insertError } = await supabase
       .from('game_records')
@@ -134,14 +109,13 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
     } else {
       // Successfully merged - clear the local record cache
       window.localStorage.removeItem('managedle:records');
-      console.log('✅ Cleared local record cache after merge');
     }
   } catch (error) {
     console.error('Error merging local records into user account:', error);
   }
 }
 
-// Current storage adapter (starts as localStorage, switches to Supabase when user logs in)
+// Current storage adapter for records (switches between localStorage and Supabase)
 let currentStorage: IStorageAdapter = localStorage;
 
 interface AppState {
@@ -150,7 +124,7 @@ interface AppState {
   authUser: AuthUser | null;
   isAuthenticated: boolean;
   
-  // Games
+  // Games (always from database)
   games: Game[];
   activeGames: Game[];
   
@@ -171,7 +145,6 @@ interface AppState {
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl?: string) => Promise<void>;
-  migrateLocalDataToCloud: () => Promise<void>;
   
   // Game actions
   addGame: (game: Omit<Game, 'gameId' | 'addedAt'>) => Promise<void>;
@@ -209,17 +182,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         const authUser = await authService.getCurrentUser();
         
         if (authUser) {
-          // User is logged in - use Supabase storage
+          // User is logged in - use Supabase storage for records
           currentStorage = new SupabaseStorageAdapter(authUser.id);
           
-          // Initialize repositories with Supabase storage
-          gameRepo = new GameRepository(currentStorage);
+          // Initialize repositories
+          gameRepo = new GameRepository(new SupabaseStorageAdapter(authUser.id));
           const recordRepo = new RecordRepository(currentStorage, authUser.id);
           
-          // Ensure global games table has default games (one-time population)
-          await gameRepo.addDefaultGames();
-          
-          // Load data from Supabase (games are global, read-only)
+          // Load games from database (global)
           const games = await gameRepo.getAll();
           const activeGames = games.filter(g => g.isActive);
           const todayRecords = await recordRepo.getTodayRecords();
@@ -237,24 +207,40 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
       
-      // No authenticated user - use local storage (guest mode)
+      // No authenticated user - guest mode (local records, global games)
       currentStorage = localStorage;
       const user = await userRepo.getOrCreate();
       
-      // Initialize repositories with local storage
-      gameRepo = new GameRepository(localStorage);
+      // Initialize repositories (games still from database)
+      gameRepo = new GameRepository(new SupabaseStorageAdapter('guest'));
       const recordRepo = new RecordRepository(localStorage, user.localId);
       
-      // Add default games if none exist
-      await gameRepo.addDefaultGames();
+      // Load games from database (global)
+      let games = await gameRepo.getAll();
       
-      // Load games
-      const games = await gameRepo.getAll();
+      // Try to load active game IDs from localStorage
+      const storedActiveGames = window.localStorage.getItem('managedle:active_games');
+      let activeGameIds: string[] = [];
+      
+      if (storedActiveGames) {
+        activeGameIds = JSON.parse(storedActiveGames);
+      } else {
+        // For first-time guest users, no games are active yet
+        activeGameIds = [];
+        window.localStorage.setItem('managedle:active_games', JSON.stringify(activeGameIds));
+      }
+      
+      // Update games with correct isActive based on stored IDs
+      games = games.map(g => ({
+        ...g,
+        isActive: activeGameIds.includes(g.gameId)
+      }));
+      
       const activeGames = games.filter(g => g.isActive);
-      
-      // Load today's records
+
+      // Load today's records from localStorage
       const todayRecords = await recordRepo.getTodayRecords();
-      
+
       set({
         user,
         authUser: null,
@@ -274,21 +260,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const authUser = await authService.login(email, password);
       
-      // Merge locally cached active games into user's profile config
-      await mergeLocalActiveGamesIntoProfile(authUser.id);
-      
-      // Merge locally cached records into user's account
+      // Merge locally cached records into user's account (includes active games)
       await mergeLocalRecordsIntoUserAccount(authUser.id);
       
-      // Switch to Supabase storage
+      // Switch to Supabase storage for records
       currentStorage = new SupabaseStorageAdapter(authUser.id);
-      gameRepo = new GameRepository(currentStorage);
+      gameRepo = new GameRepository(new SupabaseStorageAdapter(authUser.id));
       const recordRepo = new RecordRepository(currentStorage, authUser.id);
       
-      // Ensure global games table has default games (one-time population)
-      await gameRepo.addDefaultGames();
-      
-      // Load user's data from Supabase (games are global, read-only)
+      // Load games from database (global)
       const games = await gameRepo.getAll();
       const activeGames = games.filter(g => g.isActive);
       const todayRecords = await recordRepo.getTodayRecords();
@@ -325,7 +305,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         throw new Error('Please check your email to confirm your account before logging in.');
       }
       
-      // Set authUser first so migrateLocalDataToCloud can access it
+      // Set authUser in state
       set({
         authUser,
         isAuthenticated: true,
@@ -347,20 +327,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error('Failed to ensure user profile exists:', profileCheckError);
       }
       
-      // Merge locally cached active games into user's profile config
-      await mergeLocalActiveGamesIntoProfile(authUser.id);
-      
-      // Merge locally cached records into user's account
+      // Merge locally cached records into user's account (includes active games)
       await mergeLocalRecordsIntoUserAccount(authUser.id);
       
-      // Switch to Supabase storage
+      // Switch to Supabase storage for records
       currentStorage = new SupabaseStorageAdapter(authUser.id);
-      gameRepo = new GameRepository(currentStorage);
+      gameRepo = new GameRepository(new SupabaseStorageAdapter(authUser.id));
+      const recordRepo = new RecordRepository(currentStorage, authUser.id);
       
-      // Migrate local data to cloud (authUser is now set in state)
-      await get().migrateLocalDataToCloud();
+      // Load games from database and today's records
+      const games = await gameRepo.getAll();
+      const activeGames = games.filter(g => g.isActive);
+      const todayRecords = await recordRepo.getTodayRecords();
+      
+      set({ games, activeGames, todayRecords });
     } catch (error) {
-      console.error('Registration failed:', error);
+      console.error('Failed to register:', error);
       throw error;
     }
   },
@@ -368,12 +350,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout: async () => {
     try {
       await authService.logout();
-      
-      // Switch back to local storage
+
+      // Clear only records from localStorage (NOT games - they're in database)
+      window.localStorage.removeItem('managedle:records');
+      window.localStorage.removeItem('managedle:user');
+      window.localStorage.removeItem('managedle:active_games');
+
+      // Reset in-memory cache/state
+      set({
+        user: null,
+        authUser: null,
+        isAuthenticated: false,
+        games: [],
+        activeGames: [],
+        todayRecords: [],
+        statsCache: new Map(),
+        isLoading: false,
+      });
+
+      // Switch back to local storage for records
       currentStorage = localStorage;
-      gameRepo = new GameRepository(localStorage);
-      
-      // Re-initialize with local storage
+      gameRepo = new GameRepository(new SupabaseStorageAdapter('guest'));
+
+      // Re-initialize with guest mode
+
+      // Re-initialize with local storage (will repopulate guest view)
       await get().initialize();
     } catch (error) {
       console.error('Logout failed:', error);
@@ -398,39 +399,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           avatarUrl: avatarUrl || authUser.avatarUrl,
         },
       });
-      
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-      throw error;
-    }
-  },
-
-  migrateLocalDataToCloud: async () => {
-    try {
-      const { authUser } = get();
-      if (!authUser) {
-        throw new Error('No authenticated user');
-      }
-      
-      // Get all data from localStorage
-      const localGames = await localStorage.getAll<Game>('games');
-      const localRecords = await localStorage.getAll<GameRecord>('game_records');
-      
-      // Save to Supabase
-      const supabaseStorage = new SupabaseStorageAdapter(authUser.id);
-      await supabaseStorage.saveGames(localGames);
-      await supabaseStorage.saveRecords(localRecords);
-      
-      // Reload data from Supabase
-      currentStorage = supabaseStorage;
-      gameRepo = new GameRepository(currentStorage);
-      const recordRepo = new RecordRepository(currentStorage, authUser.id);
-      
-      const games = await gameRepo.getAll();
-      const activeGames = games.filter(g => g.isActive);
-      const todayRecords = await recordRepo.getTodayRecords();
-      
-      set({ games, activeGames, todayRecords });
       
     } catch (error) {
       console.error('Failed to migrate data:', error);
@@ -533,8 +501,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           .update({ active_games: updatedActiveGames })
           .eq('user_id', authUser.id);
       } else {
-        // Guest user: toggle in local storage via repository
-        await gameRepo.toggleActive(gameId);
+        // Guest user: update localStorage directly
+        const activeGameIds = activeGames.map(g => g.gameId);
+        window.localStorage.setItem('managedle:active_games', JSON.stringify(activeGameIds));
       }
     } catch (error) {
       // Revert on error
@@ -585,21 +554,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteRecord: async (recordId) => {
     const { user, isAuthenticated, authUser } = get();
     if (!user) return;
-    
+
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
-    
+
     // Get the record before deleting to know which game's stats to invalidate
     const allRecords = await recordRepo.getAll();
     const recordToDelete = allRecords.find(r => r.recordId === recordId);
-    
+
+    // Delete from current storage adapter (handles both local and Supabase)
     const success = await recordRepo.delete(recordId);
-    
+
     if (success) {
       // Reload today's records
       const todayRecords = await recordRepo.getTodayRecords();
       set({ todayRecords });
-      
+
       // Invalidate stats cache for this game
       if (recordToDelete) {
         const statsCache = new Map(get().statsCache);

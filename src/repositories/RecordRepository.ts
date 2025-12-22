@@ -32,7 +32,8 @@ export class RecordRepository {
    * Get today's records
    */
   async getTodayRecords(): Promise<GameRecord[]> {
-    return this.getByDate(getTodayDate());
+    const todayDate = getTodayDate();
+    return this.getByDate(todayDate);
   }
 
   /**
@@ -106,30 +107,5 @@ export class RecordRepository {
 
     await this.storage.setAll(COLLECTION_NAME, filtered);
     return true;
-  }
-
-  /**
-   * Check if a game has been played today
-   */
-  async hasPlayedToday(gameId: string): Promise<boolean> {
-    const record = await this.getByGameAndDate(gameId, getTodayDate());
-    return record !== null;
-  }
-
-  /**
-   * Get date range of records for a game
-   */
-  async getDateRange(gameId: string): Promise<{ earliest: string; latest: string } | null> {
-    const records = await this.getByGame(gameId);
-    
-    if (records.length === 0) {
-      return null;
-    }
-
-    const dates = records.map(r => r.date).sort();
-    return {
-      earliest: dates[0],
-      latest: dates[dates.length - 1],
-    };
   }
 }

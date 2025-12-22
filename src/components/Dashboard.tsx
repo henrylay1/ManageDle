@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import ReactTooltip from 'react-tooltip';
 import { useAppStore } from '@/store/appStore';
 import GameCard from './GameCard';
-import EditGameModal from './EditGameModal';
 import ScoreEntryModal from './ScoreEntryModal';
 import StatsModal from './StatsModal';
 import RemoveModal from './RemoveModal';
@@ -106,8 +105,6 @@ function TooltipWithHoverOut({ onHide }: { onHide: () => void }) {
 
 function Dashboard() {
   const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
-  const [showAddGame, setShowAddGame] = useState(false);
-  const [showEditGame, setShowEditGame] = useState(false);
   const [showScoreEntry, setShowScoreEntry] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showRemove, setShowRemove] = useState(false);
@@ -116,7 +113,6 @@ function Dashboard() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['academic']);
   const [onboardingActive, setOnboardingActive] = useState(false);
   const wordleAddBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -150,11 +146,6 @@ function Dashboard() {
     setSelectedGame(game);
     setShowStats(true);
   };
-
-  // const handleEditGame = (game: Game) => {
-  //   setEditingGame(game);
-  //   setShowEditGame(true);
-  // };
 
   const getTodayRecord = (gameId: string) => {
     return todayRecords.find(r => r.gameId === gameId);
@@ -227,12 +218,6 @@ function Dashboard() {
               </span>
             )}
 
-            {/* <button 
-              className="btn-primary"
-              onClick={() => setShowAddGame(true)}
-            >
-              + Add Game
-            </button> */}
           </div>
         </div>
         
@@ -426,44 +411,6 @@ function Dashboard() {
         </div>
         */}
       </section>
-
-      {showAddGame && (
-        <div className="coming-soon-popup" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '2rem 3rem',
-            borderRadius: '12px',
-            boxShadow: '0 2px 16px rgba(0,0,0,0.2)',
-            textAlign: 'center',
-            color: 'black'
-          }}>
-            <h2>Coming Soon</h2>
-            <p>This feature is coming soon!</p>
-            <button onClick={() => setShowAddGame(false)} style={{marginTop: '1rem'}}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {showEditGame && editingGame && (
-        <EditGameModal 
-          game={editingGame}
-          onClose={() => {
-            setShowEditGame(false);
-            setEditingGame(null);
-          }} 
-        />
-      )}
 
       {selectedGame && showScoreEntry && (
         <ScoreEntryModal

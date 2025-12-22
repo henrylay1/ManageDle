@@ -21,11 +21,10 @@ export interface Game {
  */
 export interface ShareTextEntry {
   name: string; // Name of the subtask (e.g., "main", "classic", "quote")
-  shareText: string; // The emoji grid/share text
+  shareText?: string; // The emoji grid/share text
   completed: boolean;
   failed: boolean;
   score?: number;
-  hardMode?: boolean;
   additionalScores?: { label: string; value: number; maxValue?: number }[]; // For games with multiple score metrics (e.g., Pokedoku uniqueness)
   // Parsed data from shareTextParser (stored once, read many times)
   maxAttempts?: number; // Total attempts allowed (e.g., 6 for Wordle)
@@ -53,8 +52,6 @@ export interface GameRecord {
   failed: boolean; // Whether the user failed to solve
   timeSpent?: number; // Time in seconds
   metadata?: {
-    hardMode?: boolean;
-    shareText?: string; // The emoji grid/share text (legacy, for single share text)
     shareTexts?: ShareTextEntry[]; // Multiple share texts for games with subtasks
     streakDay?: number;
     notes?: string;
@@ -93,15 +90,6 @@ export interface GameStats {
   scoreDistribution: Record<string, number>; // {"1": 5, "2": 20, ...}
   lastPlayedDate?: string; // YYYY-MM-DD
   computedAt: string; // ISO 8601 timestamp
-}
-
-/**
- * Schema version metadata for migrations
- */
-export interface StorageMetadata {
-  schemaVersion: number;
-  migrations: string[]; // List of applied migration IDs
-  lastUpdated: string;
 }
 
 /**

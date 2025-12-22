@@ -1,4 +1,4 @@
-import { IStorageAdapter, QueryFilter, SyncResult } from '@/types/storage';
+import { IStorageAdapter, QueryFilter } from '@/types/storage';
 
 /**
  * Local Storage implementation of the storage adapter
@@ -124,13 +124,4 @@ export class LocalStorageAdapter implements IStorageAdapter {
     }
   }
 
-  /**
-   * Sync is not implemented for local storage
-   */
-  async sync(): Promise<SyncResult> {
-    return {
-      success: true,
-      recordsSynced: 0,
-    };
-  }
 }

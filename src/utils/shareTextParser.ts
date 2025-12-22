@@ -19,7 +19,6 @@ export interface ParsedShareText {
   maxAttempts?: number; // Total attempts allowed (e.g., 6)
   completed: boolean; // Whether the game was completed
   grid?: string; // The emoji grid
-  hardMode?: boolean; // Whether hard mode was detected
   puzzleNumber?: string; // The puzzle number (e.g., "1,643" from "Wordle 1,643 X/6")
   gameName?: string; // The game name (e.g., "Wordle")
   uniqueness?: number; // Uniqueness score (e.g., for Pokedoku 900/163)
@@ -831,9 +830,6 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
   }
 
   // Check for hard mode indicator
-  if (text.includes('*') || text.toLowerCase().includes('hard mode')) {
-    result.hardMode = true;
-  }
 
   // Extract emoji grid (lines containing game emojis)
   const emojiLines: string[] = [];
@@ -907,7 +903,6 @@ export function autoFillFromShareText(shareText: string, expectedGameName?: stri
       completed: parsed.completed,
       failed: parsed.failed,
       score: parsed.score,
-      hardMode: parsed.hardMode,
       shareText: shareText.trim(),
     };
   } catch (error) {

@@ -32,7 +32,7 @@ function RemoveModal({ game, record, onClose, onRemoveGame, onDeleteRecord }: Re
               <span className="option-icon">🚫</span>
               <div className="option-text">
                 <strong>Remove from Today's Games</strong>
-                <small>Keep in roster, just hide from today</small>
+                <small>Remove from your dailies, today's entry still exists</small>
               </div>
             </button>
             
@@ -47,7 +47,24 @@ function RemoveModal({ game, record, onClose, onRemoveGame, onDeleteRecord }: Re
                 <span className="option-icon">🗑️</span>
                 <div className="option-text">
                   <strong>Delete Today's Entry</strong>
-                  <small>Remove score, keep game active</small>
+                  <small>Remove today's entry, game stays in your dailies</small>
+                </div>
+              </button>
+             )}
+            
+            {record && (
+              <button 
+                className="remove-option-btn remove-both"
+                onClick={() => {
+                  onRemoveGame();
+                  onDeleteRecord();
+                  onClose();
+                }}
+              >
+                <span className="option-icon">🗑️+🚫</span>
+                <div className="option-text">
+                  <strong>Remove & Delete Entry</strong>
+                  <small>Remove from dailies and delete today's entry</small>
                 </div>
               </button>
             )}

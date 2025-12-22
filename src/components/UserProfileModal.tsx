@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface UserGameStats {
@@ -41,7 +41,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
     try {
       // Fetch user stats from user_game_stats
-      console.debug('[UserProfileModal] Loading profile for userId:', userId);
       const { data: statsData, error: statsError } = await supabase
         .from('user_game_stats')
         .select('game_id, total_wins, total_played')

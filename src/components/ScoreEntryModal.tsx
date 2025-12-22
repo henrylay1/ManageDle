@@ -56,17 +56,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     if (existingRecord?.metadata?.shareTexts) {
       return [...existingRecord.metadata.shareTexts];
     }
-    // Migrate legacy single shareText to new format
-    if (existingRecord?.metadata?.shareText) {
-      return [{
-        name: '',
-        shareText: existingRecord.metadata.shareText,
-        completed: existingRecord.completed,
-        failed: existingRecord.failed,
-        score: existingRecord.score,
-        hardMode: existingRecord.metadata.hardMode
-      }];
-    }
     // New record - initialize with "main" or default subtasks
     if (hasMultipleShareTexts && game.customData?.defaultShareTexts) {
       return (game.customData.defaultShareTexts as string[]).map(name => ({
@@ -146,7 +135,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             completed: score !== undefined,
             failed: false,
             score: score,
-            hardMode: false,
           };
         });
         setShareTexts(newShareTexts);
@@ -168,7 +156,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             completed: score !== undefined,
             failed: false,
             score: score,
-            hardMode: false,
           };
         });
         setShareTexts(newShareTexts);
@@ -200,7 +187,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             failed: hasPuzzle && score === undefined,
             score: score,
             maxAttempts: maxAttemptsMap[modeName],
-            hardMode: false,
           };
         });
         
@@ -230,9 +216,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           updated[index].failed = parsed.failed;
           if (parsed.score !== undefined && parsed.score !== null) {
             updated[index].score = parsed.score;
-          }
-          if (parsed.hardMode !== undefined) {
-            updated[index].hardMode = parsed.hardMode;
           }
           
           // Parse full data and store all parsed fields for future use (no re-parsing in GameCard)
@@ -410,7 +393,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         failed: shareTexts.length > 1 ? (anyCompleted && anyFailed) : shareTexts[0].failed,
         score: totalScore,
         metadata: {
-          hardMode: shareTexts.some(st => st.hardMode),
           shareTexts: shareTexts,
           hasInvalidShareText: false,
         },
@@ -590,7 +572,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                               : typeof entry.score === 'number'
                                 ? (entry.failed
                                     ? 'X'
-                                    : entry.score + (entry.shareText.match(/\/(\d+)/)?.[1] ? `/${entry.shareText.match(/\/(\d+)/)?.[1]}` : ''))
+                                    : entry.score + (entry.shareText?.match(/\/(\d+)/)?.[1] ? `/${entry.shareText?.match(/\/(\d+)/)?.[1]}` : ''))
                                 : ''
                           }
                           placeholder={getScoreLabel(game.displayName)}

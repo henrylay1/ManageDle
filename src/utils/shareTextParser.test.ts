@@ -47,7 +47,6 @@ const testCases = [
       failed: false,
       maxAttempts: 6,
       completed: true,
-      hardMode: true,
     }
   },
 ];

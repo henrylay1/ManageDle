@@ -47,16 +47,6 @@ export const getTimestamp = (): string => {
 };
 
 /**
- * Calculate the number of days between two dates
- */
-export const daysBetween = (date1: string, date2: string): number => {
-  const d1 = new Date(date1 + 'T00:00:00');
-  const d2 = new Date(date2 + 'T00:00:00');
-  const diffTime = Math.abs(d2.getTime() - d1.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
-/**
  * Check if a date is today
  */
 export const isToday = (dateStr: string): boolean => {

@@ -19,37 +19,3 @@ export const supabase = createClient(url, key, {
     detectSessionInUrl: true,
   },
 });
-
-// Database types (will be auto-generated after creating tables)
-export interface DbUser {
-  id: string;
-  email: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DbGameRecord {
-  record_id: string;
-  user_id: string;
-  game_id: string;
-  date: string;
-  score: number | null;
-  completed: boolean;
-  failed: boolean;
-  hard_mode: boolean;
-  share_text: string | null;
-  metadata: Record<string, any> | null;
-  created_at: string;
-}
-
-export interface DbGame {
-  game_id: string;
-  user_id: string;
-  name: string;
-  icon: string;
-  color: string;
-  created_at: string;
-  updated_at: string;
-}
