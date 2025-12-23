@@ -1,4 +1,6 @@
 import { Game, GameRecord } from '@/types/models';
+import './Modal.css';
+import './Buttons.css';
 import './RemoveModal.css';
 
 interface RemoveModalProps {
@@ -18,9 +20,7 @@ function RemoveModal({ game, record, onClose, onRemoveGame, onDeleteRecord }: Re
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         
-        <div className="modal-body">
-          <p>What would you like to do?</p>
-          
+        <div className="modal-body"> 
           <div className="remove-options">
             <button 
               className="remove-option-btn remove-from-active"

@@ -108,6 +108,8 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           category: game.category,
           tracking_type: game.trackingType,
           is_failable: game.isFailable,
+          reset_time: game.resetTime || '00:00',
+          is_asynchronous: game.isAsynchronous ?? false,
         };
       });
 
@@ -198,6 +200,8 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       addedAt: dbGame.created_at,
       icon: dbGame.icon || '',
       customData: dbGame.custom_data || undefined,
+      resetTime: dbGame.reset_time || '00:00',
+      isAsynchronous: dbGame.is_asynchronous ?? false,
     };
   }
 

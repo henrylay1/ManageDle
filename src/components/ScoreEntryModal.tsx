@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom';
 import { TooltipWithArrow } from './Dashboard';
 import { useAppStore } from '@/store/appStore';
 import { Game, GameRecord, ShareTextEntry } from '@/types/models';
-import { getTodayDate } from '@/utils/helpers';
+
 import { autoFillFromShareText, parseLoLdleSummary, parsePokedleSummary, parseGamedleSummary, parseShareText } from '@/utils/shareTextParser';
+import './Modal.css';
+import './Forms.css';
+import './Buttons.css';
 import './ScoreEntryModal.css';
 
 interface ScoreEntryModalProps {
@@ -388,7 +391,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
 
       const recordData = {
         gameId: game.gameId,
-        date: getTodayDate(),
+        date: new Date().toISOString(), // Store full timestamp for puzzle period tracking
         completed: shareTexts.length > 1 ? (allGamedleComplete || allCompleted) : shareTexts[0].completed,
         failed: shareTexts.length > 1 ? (anyCompleted && anyFailed) : shareTexts[0].failed,
         score: totalScore,

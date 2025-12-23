@@ -1,3 +1,26 @@
+/* Icon button with circular fill */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--button-bg);
+  color: var(--text-primary);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  font-size: 1.3rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.btn-icon:hover {
+  background: var(--surface-secondary);
+  color: var(--accent);
+}
+/* Dashboard Styles - Button styles moved to Buttons.css */
+
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -6,89 +29,27 @@
 
 .dashboard-section {
   animation: slideUp 0.4s ease-out;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.dashboard-header {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin: 1.5rem;
 }
 
 .section-header h2 {
   font-size: 1.8rem;
   font-weight: 600;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 0.7em 1.5em;
-  font-weight: 600;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-small {
-  padding: 0.4em 1em;
-  font-size: 0.9em;
-}
-
-.btn-edit {
-  background: #f59e0b;
-  min-width: auto;
-  padding: 0.4em 0.8em;
-}
-
-.btn-edit:hover {
-  background: #d97706;
-}
-
-.btn-leaderboard {
-  background: #f59e0b;
-}
-
-.btn-leaderboard:hover {
-  background: #d97706;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-}
-
-.btn-login {
-  background: white;
-  color: #3b82f6;
-  border: 2px solid #3b82f6;
-}
-
-.btn-login:hover {
-  background: #f0f9ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-signup {
-  background: #3b82f6;
-}
-
-.btn-signup:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-account {
-  background: #3b82f6;
-}
-
-.btn-account:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .offline-mode-text {
@@ -97,12 +58,14 @@
   font-style: italic;
 }
 
+
 .empty-state {
   text-align: center;
   padding: 3rem;
-  background: #1a1a1a;
+  background: var(--surface);
   border-radius: 12px;
-  border: 2px dashed #333;
+  border: 2px dashed var(--surface-border, #333);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .empty-state p {
@@ -115,17 +78,22 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
+  margin: 1.5rem;
 }
+
 
 .category-section {
   margin-bottom: 1.5rem;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
 }
 
 .category-title {
   font-size: 1.2rem;
   font-weight: 600;
   padding: 1rem;
-  background: #2a2a2a;
+  background: var(--surface);
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
@@ -133,11 +101,15 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border-bottom: 2px solid var(--border);
 }
 
+
 .category-title:hover {
-  background: #333;
+  background: var(--surface-menu);
 }
+
+
 
 .category-title.expanded {
   border-bottom-left-radius: 0;
@@ -155,8 +127,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem;
-  background: #1a1a1a;
-  border: 2px solid #2a2a2a;
+  background: var(--surface);
   border-top: none;
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
@@ -179,13 +150,18 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #1a1a1a;
+  background: var(--surface-menu);
   border-radius: 8px;
   transition: background 0.2s;
 }
 
 .game-list-item:hover {
-  background: #252525;
+  background: #5a5c7a;
+}
+/* Game card and menu backgrounds */
+.game-card, .menu, .dropdown-menu, .account-menu {
+  background: var(--surface-menu) !important;
+  color: var(--text-primary);
 }
 
 .game-icon {
@@ -209,51 +185,6 @@
   color: #10b981;
 }
 
-@media (prefers-color-scheme: light) {
-  .empty-state {
-    background: #f9f9f9;
-    border-color: #e0e0e0;
-  }
-  
-  .category-title {
-    background: #f0f0f0;
-  }
-  
-  .category-title:hover {
-    background: #e5e5e5;
-  }
-  
-  .games-list {
-    background: #fafafa;
-    border-color: #e0e0e0;
-  }
-  
-  .game-list-item {
-    background: #ffffff;
-  }
-  
-  .game-list-item:hover {
-    background: #f9f9f9;
-  }
-}
-@media (prefers-color-scheme: light) {
-  .empty-state {
-    background: #f9f9f9;
-    border-color: #e0e0e0;
-  }
-  
-  .category-title {
-    border-bottom-color: #e0e0e0;
-  }
-  
-  .game-list-item {
-    background: #f9f9f9;
-  }
-  
-  .game-list-item:hover {
-    background: #f0f0f0;
-  }
-}
 
 @media (max-width: 768px) {
   .section-header {

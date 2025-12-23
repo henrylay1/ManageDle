@@ -1,14 +1,1 @@
-.form-field-row {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.form-field-row label {
-  min-width: 150px;
-  width: 150px;
-  display: inline-block;
-}
-
-.form-input {
-  margin-left: auto;
-}
+/* AuthModal specific styles - Form styles moved to Forms.css */

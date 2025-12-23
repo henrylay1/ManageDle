@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
+import './Modal.css';
+import './Forms.css';
+import './Buttons.css';
 import './AuthModal.css';
 
 interface RegisterModalProps {

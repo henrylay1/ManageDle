@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
+import './Modal.css';
+import './Forms.css';
+import './Buttons.css';
 import './AddGameModal.css';
 
 interface AddGameModalProps {
@@ -35,6 +38,8 @@ function AddGameModal({ onClose }: AddGameModalProps) {
         trackingType: 'manual',
         isActive,
         isFailable,
+        resetTime: '00:00', // Default to midnight UTC
+        isAsynchronous: false, // Default to synchronous
       });
 
       onClose();

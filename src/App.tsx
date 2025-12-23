@@ -21,13 +21,7 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>ManageDle</h1>
-        <p>Your daily puzzle hub</p>
-      </header>
-      <main className="app-main">
-        <Dashboard />
-      </main>
+      <Dashboard />
     </div>
   );
 }

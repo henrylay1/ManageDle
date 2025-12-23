@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/appStore';
 import { Game, GameStats } from '@/types/models';
+import './Modal.css';
+import './Buttons.css';
 import './StatsModal.css';
 
 interface StatsModalProps {

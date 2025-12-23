@@ -1,0 +1,210 @@
+/* Shared Button Styles */
+
+/* Primary button - gradient background */
+.btn-primary {
+  background: var(--button-bg-primary) !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 0.7em 1.5em !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 1rem !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Action buttons - play, log, stats */
+.btn-action {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  padding: 0.7em 1.5em;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-action:hover {
+  background: #484b6a;
+}
+
+/* Small button variant */
+.btn-small {
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.4em 1em;
+  font-size: 0.9em;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-small:hover {
+  background: #484b6a;
+}
+
+/* Edit button */
+.btn-edit {
+  background: var(--button-bg);
+  color: #fff;
+  border: none;
+  min-width: auto;
+  padding: 0.4em 0.8em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-edit:hover {
+  background: #d97706;
+}
+
+/* Leaderboard button */
+.btn-leaderboard {
+  background: var(--button-bg-leaderboard);
+  color: #fff;
+  border: none;
+  padding: 0.7em 1.5em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-leaderboard:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Login button */
+.btn-login {
+  background: var(--button-bg-login);
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+  padding: 0.7em 1.5em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-login:hover {
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Signup button */
+.btn-signup {
+  background: var(--button-bg-signup);
+  color: #fff;
+  border: none;
+  padding: 0.7em 1.5em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-signup:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Account button */
+.btn-account {
+  background: var(--button-bg-account);
+  color: #fff;
+  border: none;
+  padding: 0.7em 1.5em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-account:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Danger button */
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Remove game button - specific to GameCard */
+.btn-remove-game {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background 0.2s, transform 0.1s;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.btn-remove-game:hover {
+  background: #ff4444;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.btn-remove-game:active {
+  transform: scale(0.95);
+}
+
+/* Modal close button */
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+  background: #333;
+  color: #fff;
+}

@@ -1,4 +1,7 @@
 import { Game, GameRecord } from '@/types/models';
+import { formatTimeUntilReset } from '@/utils/resetTimeUtils';
+import { useEffect, useState } from 'react';
+import './Buttons.css';
 import './GameCard.css';
 
 /**
@@ -153,6 +156,17 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
   const isFailed = record?.failed || false;
   const isSuccess = isCompleted && !hasError && !isFailed;
 
+  // Timer state for live countdown
+  const [, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000 * 60); // update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeUntilReset = formatTimeUntilReset(game);
+
   return (
     <div className={`game-card ${hasError ? 'error' : ''} ${isCompleted && !hasError ? 'completed' : ''}`}>
       <div className="game-card-header">
@@ -179,6 +193,11 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
             </button>
           )}
         </div>
+      </div>
+      
+      {/* Time until reset */}
+      <div className="game-card-reset-time">
+        ⏰ Resets in {timeUntilReset}
       </div>
 
       <div className="game-card-body">
@@ -308,21 +327,21 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
 
       <div className="game-card-actions">
         <button 
-          className="btn-play"
+          className="btn-action"
           onClick={onPlay}
           title="Open game"
         >
           🎮 Play
         </button>
         <button 
-          className="btn-log"
+          className="btn-action"
           onClick={onLogScore}
           title="Log your score"
         >
           📝 {record ? 'Edit' : 'Log'} Score
         </button>
         <button 
-          className="btn-stats"
+          className="btn-action"
           onClick={onViewStats}
           title="View statistics"
         >

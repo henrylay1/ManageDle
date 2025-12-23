@@ -11,6 +11,12 @@ interface AccountMenuProps {
 export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showPfpOverlay, setShowPfpOverlay] = useState(false);
+
+  // Reset pfp overlay state when menu is closed
+  const handleClose = () => {
+    setShowPfpOverlay(false);
+    onClose();
+  };
   
   const authUser = useAppStore(state => state.authUser);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -51,7 +57,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
     return (
       <PfpOverlay
         onBackToMenu={() => setShowPfpOverlay(false)}
-        onCloseAll={onClose}
+        onCloseAll={handleClose}
         onEmojiSelect={handleEmojiSelect}
         currentEmoji={selectedEmoji}
       />
@@ -70,7 +76,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 9999
-    }} onClick={onClose}>
+    }} onClick={handleClose}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '8px',
@@ -82,7 +88,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
         position: 'relative',
       }} onClick={(e) => e.stopPropagation()}>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="btn-remove-game"
           style={{
             position: 'absolute',

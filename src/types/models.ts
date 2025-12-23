@@ -14,6 +14,8 @@ export interface Game {
   addedAt: string; // ISO 8601 timestamp
   icon?: string; // Optional emoji or icon
   customData?: Record<string, unknown>; // Extensible metadata
+  resetTime: string; // UTC time when game resets in HH:MM format (e.g., "00:00")
+  isAsynchronous: boolean; // Whether game resets based on user's local timezone (true) or UTC (false)
 }
 
 /**
@@ -46,7 +48,7 @@ export interface GameRecord {
   gameId: string; // References Game.gameId
   localId: string; // Owner device/user identifier
   userId?: string; // Backend user ID (populated after migration)
-  date: string; // YYYY-MM-DD format
+  date: string; // ISO 8601 timestamp (full date+time) for puzzle period tracking
   completed: boolean; // Whether the game was completed
   score?: number; // Score (e.g., 1-6 for Wordle attempts)
   failed: boolean; // Whether the user failed to solve

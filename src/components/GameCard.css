@@ -95,26 +95,14 @@
   filter: drop-shadow(0 0 4px gold);
 }
 
-.btn-remove-game {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background 0.2s, transform 0.1s;
-  line-height: 1;
-  opacity: 0.7;
-}
-
-.btn-remove-game:hover {
-  background: #ff4444;
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.btn-remove-game:active {
-  transform: scale(0.95);
+.game-card-reset-time {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .game-card-body {
@@ -197,36 +185,8 @@
   margin-top: auto;
 }
 
-.game-card-actions button {
+.game-card-actions .btn-action {
   flex: 1;
-  padding: 0.6em;
-  font-size: 0.9em;
-  background: #2a2a2a;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.game-card-actions button:hover {
-  background: #333;
-  transform: scale(1.05);
-}
-
-.game-card-actions button:active {
-  transform: scale(0.98);
-}
-
-.btn-play:hover {
-  background: #667eea22;
-  color: #667eea;
-}
-
-.btn-log:hover {
-  background: #10b98122;
-  color: #10b981;
-}
-
-.btn-stats:hover {
-  background: #f59e0b22;
-  color: #f59e0b;
 }
 
 .share-texts-container {
@@ -237,8 +197,9 @@
 }
 
 .share-text-entry-preview {
+  color: var(--button-text);
   background: #222;
-  border: 1px solid #333;
+  border: 3px solid;
   border-radius: 6px;
   padding: 0.5rem;
   display: flex;
@@ -249,12 +210,12 @@
 }
 
 .share-text-entry-preview.success {
-  background: #1a2e1a;
+  background: rgba(16, 185, 129, 0.2);
   border-color: #10b981;
 }
 
 .share-text-entry-preview.failed {
-  background: #2e1a1a;
+  background: rgba(239, 68, 68, 0.2);
   border-color: #ef4444;
 }
 
@@ -297,23 +258,4 @@
   color: #667eea;
   opacity: 1;
   margin-bottom: 0.25rem;
-}
-
-@media (prefers-color-scheme: light) {
-  .game-card {
-    background: #ffffff;
-    border-color: #e0e0e0;
-  }
-  
-  .game-card.completed {
-    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-  }
-  
-  .game-card-actions button {
-    background: #f9f9f9;
-  }
-  
-  .game-card-actions button:hover {
-    background: #f0f0f0;
-  }
 }

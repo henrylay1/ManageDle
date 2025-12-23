@@ -1,6 +1,8 @@
 import { GameRecord } from '@/types/models';
 import { IStorageAdapter } from '@/types/storage';
-import { generateUUID, getTimestamp, getTodayDate } from '@/utils/helpers';
+import { generateUUID, getTimestamp } from '@/utils/helpers';
+import { isCurrentPuzzle } from '@/utils/resetTimeUtils';
+import type { Game } from '@/types/models';
 
 const COLLECTION_NAME = 'records';
 
@@ -29,11 +31,23 @@ export class RecordRepository {
   }
 
   /**
-   * Get today's records
+   * Get today's records (for current puzzle period)
+   * @param games - Array of games with reset time configuration
    */
-  async getTodayRecords(): Promise<GameRecord[]> {
-    const todayDate = getTodayDate();
-    return this.getByDate(todayDate);
+  async getTodayRecords(games: Game[]): Promise<GameRecord[]> {
+    const records = await this.getAll();
+    const userRecords = records.filter(r => r.localId === this.localId);
+    
+    // Create a map of gameId -> game for quick lookup
+    const gameMap = new Map(games.map(g => [g.gameId, g]));
+    
+    // Filter records that belong to the current puzzle period
+    return userRecords.filter(record => {
+      const game = gameMap.get(record.gameId);
+      if (!game) return false; // Game not found, exclude record
+      
+      return isCurrentPuzzle(record.date, game);
+    });
   }
 
   /**

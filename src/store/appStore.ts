@@ -192,7 +192,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           // Load games from database (global)
           const games = await gameRepo.getAll();
           const activeGames = games.filter(g => g.isActive);
-          const todayRecords = await recordRepo.getTodayRecords();
+          const todayRecords = await recordRepo.getTodayRecords(games);
           
           set({
             authUser,
@@ -239,7 +239,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const activeGames = games.filter(g => g.isActive);
 
       // Load today's records from localStorage
-      const todayRecords = await recordRepo.getTodayRecords();
+      const todayRecords = await recordRepo.getTodayRecords(games);
 
       set({
         user,
@@ -271,7 +271,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Load games from database (global)
       const games = await gameRepo.getAll();
       const activeGames = games.filter(g => g.isActive);
-      const todayRecords = await recordRepo.getTodayRecords();
+      const todayRecords = await recordRepo.getTodayRecords(games);
       
       set({
         authUser,
@@ -338,7 +338,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Load games from database and today's records
       const games = await gameRepo.getAll();
       const activeGames = games.filter(g => g.isActive);
-      const todayRecords = await recordRepo.getTodayRecords();
+      const todayRecords = await recordRepo.getTodayRecords(games);
       
       set({ games, activeGames, todayRecords });
     } catch (error) {
@@ -522,7 +522,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     await recordRepo.add(record);
     
     // Reload today's records
-    const todayRecords = await recordRepo.getTodayRecords();
+    const games = get().games;
+    const todayRecords = await recordRepo.getTodayRecords(games);
     set({ todayRecords });
     
     // Invalidate stats cache for this game
@@ -541,7 +542,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     if (updatedRecord) {
       // Reload today's records
-      const todayRecords = await recordRepo.getTodayRecords();
+      const games = get().games;
+      const todayRecords = await recordRepo.getTodayRecords(games);
       set({ todayRecords });
       
       // Invalidate stats cache for this game
@@ -567,7 +569,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     if (success) {
       // Reload today's records
-      const todayRecords = await recordRepo.getTodayRecords();
+      const games = get().games;
+      const todayRecords = await recordRepo.getTodayRecords(games);
       set({ todayRecords });
 
       // Invalidate stats cache for this game
@@ -585,7 +588,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
-    const todayRecords = await recordRepo.getTodayRecords();
+    const games = get().games;
+    const todayRecords = await recordRepo.getTodayRecords(games);
     set({ todayRecords });
   },
 

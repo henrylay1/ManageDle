@@ -151,6 +151,8 @@ export class GameRepository {
           icon: dbGame.icon,
           customData: dbGame.custom_data || undefined,
           addedAt: new Date().toISOString(),
+          resetTime: dbGame.reset_time || '00:00',
+          isAsynchronous: dbGame.is_asynchronous ?? false,
         }));
         
         await this.storage.setAll('games', gamesToAdd);

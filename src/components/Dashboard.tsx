@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import TicketModal from './TicketModal';
 import ReactTooltip from 'react-tooltip';
 import { useAppStore } from '@/store/appStore';
 import GameCard from './GameCard';
@@ -11,6 +12,7 @@ import { AccountMenu } from './AccountMenu';
 import { LeaderboardModal } from './LeaderboardModal';
 import { authService } from '@/services/authService';
 import { Game } from '@/types/models';
+import './Buttons.css';
 import './Dashboard.css';
 
 // Reusable TooltipWithArrow component
@@ -104,6 +106,8 @@ function TooltipWithHoverOut({ onHide }: { onHide: () => void }) {
 }
 
 function Dashboard() {
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('theme') || 'dark');
+  const [showTicketModal, setShowTicketModal] = useState(false);
   const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
   const [showScoreEntry, setShowScoreEntry] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -171,12 +175,61 @@ function Dashboard() {
     }
   };
 
+  // Theme toggle handler
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    window.localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  // Set theme on mount
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   return (
     <div className="dashboard" style={{ position: 'relative' }}>
+      {/* Persistent dashboard header at the very top */}
+      <header className="dashboard-header" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem 2rem',
+        top: 0, zIndex: 100
+      }}>
+        <div className="dashboard-title" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '2rem' }}>🎮</span>
+            <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.02em' }}>ManageDle</span>
+          </div>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #888)' }}>Your daily puzzle hub</span>
+        </div>
+        <div className="dashboard-header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center', position: 'absolute', right: '2rem' }}>
+          {/* Theme toggle icon */}
+          <button
+            className="btn-icon btn-theme-toggle"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={handleThemeToggle}
+            style={{ fontSize: '1.5rem', cursor: 'pointer' }}
+          >
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+          {/* Ticket/feedback icon */}
+          <button
+            className="btn-icon btn-ticket"
+            title="Send feedback or report a problem"
+            onClick={() => setShowTicketModal(true)}
+            style={{ fontSize: '1.5rem', cursor: 'pointer' }}
+          >
+            📨
+          </button>
+        </div>
+      </header>
       <section className="dashboard-section">
         <div className="section-header">
           <h2>📅 Today's Games</h2>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {/* Ticket Modal */}
+              <TicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
             {/* Leaderboard Button */}
             {authService.isConfigured() && (
               <button
@@ -225,6 +278,7 @@ function Dashboard() {
           <div className="empty-state">
             <p>No games in your roster yet!</p>
             <button
+              className="btn-small"
               onClick={() => {
                 // Expand all categories and activate onboarding
                 setExpandedCategories(['academic', 'games', 'misc']);
