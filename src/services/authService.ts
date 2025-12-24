@@ -13,12 +13,29 @@ export class AuthService {
    * Register a new user with email and password
    */
   async register(email: string, password: string, displayName?: string): Promise<AuthUser> {
+    // Default avatar for new users
+    let supabaseUrl = '';
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) {
+      supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    }
+    // Extract the project ref from the Supabase URL (e.g. https://<ref>.supabase.co)
+    let projectRef = '';
+    try {
+      const match = supabaseUrl.match(/^https:\/\/(.+?)\.supabase\.co/);
+      if (match) projectRef = match[1];
+    } catch {}
+    const defaultAvatarUrl =
+      'https://' +
+      projectRef +
+      '.supabase.co/storage/v1/object/public/profile-pictures/def_pfp_cat_1.jpg';
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           display_name: displayName || email.split('@')[0],
+          avatar_url: defaultAvatarUrl,
         },
       },
     });
@@ -45,7 +62,7 @@ export class AuthService {
                 id: signInData.user.id,
                 email: signInData.user.email!,
                 display_name: displayName || email.split('@')[0],
-                avatar_url: null,
+                avatar_url: defaultAvatarUrl,
               });
             
             if (insertError) {
@@ -58,7 +75,6 @@ export class AuthService {
               .insert({
                 user_id: signInData.user.id,
                 display_name: displayName || email.split('@')[0],
-                avatar_url: null,
                 theme: 'light',
                 notifications_enabled: true,
                 active_games: [],
@@ -73,7 +89,7 @@ export class AuthService {
               id: signInData.user.id,
               email: signInData.user.email!,
               displayName: displayName || email.split('@')[0],
-              avatarUrl: null,
+              avatarUrl: defaultAvatarUrl,
             };
           }
         }
@@ -95,7 +111,6 @@ export class AuthService {
       .insert({
         user_id: data.user.id,
         display_name: displayName || email.split('@')[0],
-        avatar_url: null,
         theme: 'light',
         notifications_enabled: true,
         active_games: [],
@@ -159,7 +174,22 @@ export class AuthService {
     if (error || !data.user) {
       return null;
     }
-    return this.mapUser(data.user);
+    // Fetch profile from users table
+    let avatarUrl = null;
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', data.user.id)
+        .single();
+      if (!profileError && profile && profile.avatar_url) {
+        avatarUrl = profile.avatar_url;
+      }
+    } catch (e) {
+      console.warn('[authService.getUser] Failed to fetch profile avatar_url:', e);
+    }
+    const mapped = this.mapUser(data.user);
+    return { ...mapped, avatarUrl: avatarUrl ?? mapped.avatarUrl };
   }
 
   /**

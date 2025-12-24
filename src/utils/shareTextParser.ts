@@ -14,7 +14,8 @@ function getCurrentDate(): string {
 }
 
 export interface ParsedShareText {
-  score?: number; // The attempt number where they succeeded (or raw score value for games like Timingle, ColorGuesser, Hexcodle)
+  score?: number; // Legacy field - DEPRECATED, use scores instead
+  scores?: Record<string, Record<string, number | undefined>>; // Structured scores e.g., { puzzle1: { attempts: 4 } }
   failed: boolean; // Whether they failed (X/6)
   maxAttempts?: number; // Total attempts allowed (e.g., 6)
   completed: boolean; // Whether the game was completed
@@ -431,21 +432,25 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     } else {
       result.score = parseInt(scoreStr, 10);
       result.guessCount = parseInt(scoreStr, 10);
+      console.log("Worldle guessCount", result.guessCount);
+      console.log("Worldle score", result.score);
     }
     
     result.completed = true;
     result.failed = result.percentage !== 100;
     
-    // Extract emoji grid (filter out score header line and metadata/streak lines)
-    const emojiLines = lines
-      .filter(line => {
-        // Skip the score header line (e.g., "#Worldle #123 3/6 (100%)")
-        if (/^#Worldle\s+#[\d,]+/i.test(line)) return false;
-        // Skip any line that contains 'streak' (case-insensitive) or starts with '🔥'
-        if (/streak/i.test(line) || line.trim().startsWith('🔥')) return false;
-        // Keep lines with Worldle emojis (arrows and directional indicators)
-        return /[⬆️⬇️⬅️➡️↗️↘️↙️↖️🟩🟨🟥]/.test(line);
-      });
+    // Extract emoji grid (ignore bonus round and unrelated lines)
+    const emojiLines = lines.filter(line => {
+      // Skip the score header line (e.g., "#Worldle #123 3/6 (100%)")
+      if (/^#Worldle\s+#[\d,]+/i.test(line)) return false;
+      // Skip any line that contains 'streak' (case-insensitive) or starts with '🔥'
+      if (/streak/i.test(line) || line.trim().startsWith('🔥')) return false;
+      // Skip any line that is a bonus round or non-emoji message
+      if (/Worldle has a new bonus round/i.test(line)) return false;
+      // Only keep lines that are made up entirely of valid Worldle emojis (arrows, colored squares, and 🎉)
+      const emojiPattern = /^[⬆️⬇️⬅️➡️↗️↘️↙️↖️🟩🟨🟥🎉]+$/u;
+      return emojiPattern.test(line.trim());
+    });
     if (emojiLines.length > 0) {
       result.grid = emojiLines.join('\n');
     }
@@ -606,18 +611,15 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
   // Timingle
   if (normalizedGameName === 'timingle') {
     const timingleMatch = text.match(/Timingle\s+#([\d,]+).*?([-+]?\d+\.?\d*)\s*seconds/is);
-    if (!timingleMatch) {
-      throw new Error('❌ Incorrect share text for Timingle. Expected format: "Timingle #... seconds..."');
-    }
-    const [, puzzleNumber, secondsStr] = timingleMatch;
-    result.gameName = 'Timingle';
-    result.puzzleNumber = puzzleNumber;
-    // Store time in milliseconds as integer (e.g., 2.4s -> 2400ms)
-    result.score = Math.round(parseFloat(secondsStr) * 1000);
-    result.completed = true;
-    result.failed = false;
-    
-    return result;
+        result.gameName = 'Timingle';
+        result.puzzleNumber = timingleMatch ? timingleMatch[1] : undefined;
+        // Store time in milliseconds as integer (e.g., 2.4s -> 2400ms)
+        const secondsStr = timingleMatch ? timingleMatch[2] : undefined;
+        result.score = secondsStr ? Math.round(parseFloat(secondsStr) * 1000) : undefined;
+        result.completed = true;
+        result.failed = false;
+        result.grid = '';
+        return result;
   }
 
   // Spellcheck

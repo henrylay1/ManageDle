@@ -81,7 +81,7 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       user_id: userId,
       game_id: record.gameId,
       date: record.date,
-      score: record.score ?? null,
+      scores: record.scores ?? null,
       completed: record.completed,
       failed: record.failed,
       share_text: (() => {
@@ -313,18 +313,50 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       
       // Ensure user profile exists in public.users table
+      // Set default avatar_url in users table
+      let supabaseUrl = '';
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) {
+        supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      }
+      let projectRef = '';
+      try {
+        const match = supabaseUrl.match(/^https:\/\/(.+?)\.supabase\.co/);
+        if (match) projectRef = match[1];
+      } catch {}
+      const defaultAvatarUrl =
+        'https://' +
+        projectRef +
+        '.supabase.co/storage/v1/object/public/profile-pictures/def_pfp_cat_1.jpg';
+
       const { error: profileCheckError } = await supabase
         .from('users')
         .upsert({
           id: authUser.id,
           email: authUser.email,
           display_name: authUser.displayName || email.split('@')[0],
+          avatar_url: defaultAvatarUrl,
         }, {
           onConflict: 'id'
         });
       
       if (profileCheckError) {
         console.error('Failed to ensure user profile exists:', profileCheckError);
+      }
+
+      // Ensure user_profile_config exists for new user
+      const { error: configCheckError } = await supabase
+        .from('user_profile_config')
+        .upsert({
+          user_id: authUser.id,
+          display_name: authUser.displayName || email.split('@')[0],
+          theme: 'light',
+          notifications_enabled: true,
+          active_games: [],
+        }, {
+          onConflict: 'user_id'
+        });
+      if (configCheckError) {
+        console.error('Failed to ensure user_profile_config exists:', configCheckError);
       }
       
       // Merge locally cached records into user's account (includes active games)

@@ -37,17 +37,16 @@ export class RecordRepository {
   async getTodayRecords(games: Game[]): Promise<GameRecord[]> {
     const records = await this.getAll();
     const userRecords = records.filter(r => r.localId === this.localId);
-    
     // Create a map of gameId -> game for quick lookup
     const gameMap = new Map(games.map(g => [g.gameId, g]));
-    
     // Filter records that belong to the current puzzle period
-    return userRecords.filter(record => {
+    const todayRecords = userRecords.filter(record => {
       const game = gameMap.get(record.gameId);
       if (!game) return false; // Game not found, exclude record
-      
-      return isCurrentPuzzle(record.date, game);
+      const isCurrent = isCurrentPuzzle(record.date, game);
+      return isCurrent;
     });
+    return todayRecords;
   }
 
   /**
@@ -112,13 +111,16 @@ export class RecordRepository {
    * Delete a record
    */
   async delete(recordId: string): Promise<boolean> {
+    // If using SupabaseStorageAdapter, call its deleteRecord method
+    if (typeof (this.storage as any).deleteRecord === 'function') {
+      return await (this.storage as any).deleteRecord(recordId);
+    }
+    // Otherwise, remove locally
     const records = await this.getAll();
     const filtered = records.filter(r => r.recordId !== recordId);
-    
     if (filtered.length === records.length) {
       return false; // Record not found
     }
-
     await this.storage.setAll(COLLECTION_NAME, filtered);
     return true;
   }

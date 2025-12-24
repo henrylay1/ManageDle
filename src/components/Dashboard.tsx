@@ -152,7 +152,8 @@ function Dashboard() {
   };
 
   const getTodayRecord = (gameId: string) => {
-    return todayRecords.find(r => r.gameId === gameId);
+    const record = todayRecords.find(r => r.gameId === gameId);
+    return record;
   };
 
   const handleRemoveGame = (game: Game) => {
@@ -167,9 +168,12 @@ function Dashboard() {
   };
 
   const handleDeleteRecord = async () => {
+    console.debug('[Dashboard.handleDeleteRecord] Deleting record for game:', selectedGame);
     if (selectedGame) {
+      console.debug('[Dashboard.handleDeleteRecord] Fetching today record for gameId:', selectedGame.gameId);
       const record = getTodayRecord(selectedGame.gameId);
       if (record?.recordId) {
+        console.debug('[Dashboard.handleDeleteRecord] Deleting record with recordId:', record.recordId);
         await useAppStore.getState().deleteRecord(record.recordId);
       }
     }

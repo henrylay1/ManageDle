@@ -33,13 +33,13 @@ function AddGameModal({ onClose }: AddGameModalProps) {
       await addGame({
         displayName: displayName.trim(),
         url: url.trim(),
-        category: 'custom',
+        category: 'misc',
         icon,
-        trackingType: 'manual',
+        trackingType: 'automatic',
         isActive,
         isFailable,
         resetTime: '00:00', // Default to midnight UTC
-        isAsynchronous: false, // Default to synchronous
+        isAsynchronous: true,
       });
 
       onClose();

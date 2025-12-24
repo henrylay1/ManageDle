@@ -5,140 +5,80 @@ import './Buttons.css';
 import './GameCard.css';
 
 /**
- * Format score display based on game type and scoring method
+ * Format score display based on game's scoreTypes and record's scores
  */
 function formatScore(record: GameRecord, game: Game): string {
-    // Always display as n/6 or X/6 for Wordle-style games
-    if (game.displayName === 'Colorfle' || game.displayName === 'Wordle' || game.displayName === 'Nerdle') {
-      const entry = record.metadata?.shareTexts?.[0];
-      const max = entry?.maxAttempts || 6;
-      if (record.failed || record.score === -1 || record.score === undefined) {
-        return `X/${max}`;
+  // New structure: use record.scores and game.scoreTypes
+  if (record.scores && game.scoreTypes) {
+    // Get the first puzzle key (e.g., "puzzle1")
+    const puzzleKeys = Object.keys(record.scores);
+    if (puzzleKeys.length === 0) return 'N/A';
+    
+    const firstPuzzle = puzzleKeys[0];
+    const actualScores = record.scores[firstPuzzle];
+    const maxScores = game.scoreTypes[firstPuzzle];
+    
+    if (!actualScores || !maxScores) return 'N/A';
+    
+    // Get the primary score type (first key in the score object)
+    const scoreTypes = Object.keys(maxScores);
+    if (scoreTypes.length === 0) return 'N/A';
+    
+    const primaryType = scoreTypes[0];
+    const actualValue = actualScores[primaryType];
+    const maxValue = maxScores[primaryType];
+    
+    // Handle different score types
+    if (primaryType === 'attempts' || primaryType === 'solved' || primaryType === 'points') {
+      if (maxValue === -1) {
+        // No max, just display value or X for failed
+        return actualValue === -1 ? 'X' : String(actualValue);
+      } else {
+        // Has max, display as n/max or X/max
+        return actualValue === -1 ? `X/${maxValue}` : `${actualValue}/${maxValue}`;
       }
-      if (typeof record.score === 'number') {
-        return `${record.score}/${max}`;
-      }
-      return `N/A`;
+    } else if (primaryType === 'time') {
+      // Time in milliseconds, display as seconds
+      const timeInSeconds = ((actualValue ?? 0) / 1000).toFixed(1);
+      return `${timeInSeconds}s`;
+    } else if (primaryType === 'accuracy') {
+      // Percentage
+      return `${actualValue}%`;
+    } else if (primaryType === 'grade') {
+      // Letter grade
+      return String(actualValue);
     }
+    
+    return String(actualValue);
+  }
+}
 
-    // Angle: Display as n/4 or X/4
-    if (game.displayName === 'Angle') {
-      const entry = record.metadata?.shareTexts?.[0];
-      const max = entry?.maxAttempts || 4;
-      if (record.failed || record.score === -1 || record.score === undefined) {
-        return `X/${max}`;
-      }
-      if (typeof record.score === 'number') {
-        return `${record.score}/${max}`;
-      }
-      return `N/A`;
-    }
-
-    // Quordle: Solved is always n/4 (number of non-red emojis)
-    if (game.displayName === 'Quordle') {
-      const solved = typeof record.score === 'number' ? record.score : 0;
-      return `${solved}/4`;
-    }
-  // Get parsed data from stored metadata (no re-parsing)
-  const entry = record.metadata?.shareTexts?.[0];
-  
-  // Game-specific formatting
-  if (game.displayName === 'Colorguesser') {
-    return `${record.score}/500`;
-  }
-
-  if (game.displayName === 'Spellcheck') {
-    return `${record.score}/15`;
-  }
-
-  if (game.displayName === 'Connections') {
-    return `${record.score}/4`;
-  }
-
-  if (game.displayName === 'Scrandle' || game.displayName === 'r34dle') {
-    return `${record.score}/10`;
-  }
-
-  if (game.displayName === 'Hexcodle') {
-    // Guesses: n/5 if solved, X/5 if failed
-    if (record.failed || record.score === -1 || record.score === undefined) {
-      return 'X/5';
-    }
-    return `${record.score}/5`;
-  }
-
-  if (game.displayName === 'Timingle') {
-    // Convert milliseconds back to seconds for display
-    const timeInSeconds = ((record.score ?? 0) / 1000).toFixed(1);
-    return `${timeInSeconds}s`;
-  }
-  
-  if (game.displayName === 'Wantedle') {
-    // Always display the time in seconds, never 'X' or any code
-    const timeInSeconds = ((record.score ?? 0) / 1000).toFixed(1);
-    return `${timeInSeconds}s`;
-  }
-  
-  if (game.displayName === 'Pokedoku') {
-    if (entry && typeof entry.score === 'number' && entry.maxAttempts !== undefined) {
-      return `${entry.score}/${entry.maxAttempts}`;
-    }
-    if (record.score !== undefined && entry?.maxAttempts !== undefined) {
-      return `${record.score}/${entry.maxAttempts}`;
-    }
-    if (entry?.score !== undefined) {
-      return `${entry.score}/9`;
-    }
-    return record.score !== undefined ? String(record.score) : 'N/A';
-  }
-  
-  if (game.displayName === 'Quordle') {
-    return `${record.score}/4`;
-  }
-  
-  if (game.displayName === 'Worldle') {
-    return `${record.score}%`;
-  }
-  
-  if (game.displayName === 'Wordle') {
-    // Always display as n/6 or X/6
-    if (entry?.failed) {
-      return 'X';
-    }else{
-        return `${record.score}/6`;
+/**
+ * Get display label for score based on game's scoreTypes
+ */
+function getScoreLabel(game: Game, record?: GameRecord): string {
+  // Prefer to derive from record.scores if available
+  if (record && record.scores) {
+    const puzzleKeys = Object.keys(record.scores);
+    if (puzzleKeys.length > 0) {
+      const firstPuzzle = puzzleKeys[0];
+      const scoreTypes = record.scores[firstPuzzle];
+      const primaryType = Object.keys(scoreTypes)[0];
+      return primaryType.charAt(0).toUpperCase() + primaryType.slice(1);
     }
   }
-
-  if (game.displayName === 'Gamedle') {
-    // For multi-puzzle display, count solved puzzles out of 5
-    if (record.metadata?.shareTexts && record.metadata.shareTexts.length > 1) {
-      // Only count successful ones for the score display
-      const solvedCount = record.metadata.shareTexts.filter(st => !st.failed && st.completed).length;
-      return `${solvedCount}/5`;
+  // Fallback to game.scoreTypes if present
+  if (game.scoreTypes) {
+    const puzzleKeys = Object.keys(game.scoreTypes);
+    if (puzzleKeys.length > 0) {
+      const firstPuzzle = puzzleKeys[0];
+      const scoreTypes = game.scoreTypes[firstPuzzle];
+      const primaryType = Object.keys(scoreTypes)[0];
+      return primaryType.charAt(0).toUpperCase() + primaryType.slice(1);
     }
-    // For single puzzle display
-    if (entry && entry.maxAttempts !== undefined) {
-      if (entry.failed || entry.score === undefined) {
-        return `X/${entry.maxAttempts}`;
-      }
-      return `${entry.score}/${entry.maxAttempts}`;
-    }
-    if (record.failed || record.score === undefined) {
-      return 'X';
-    }
-    return record.score !== undefined ? String(record.score) : 'N/A';
   }
-
-  if (game.displayName === 'Genshindle') {
-    // Display as n/5 or X/5
-    if (record.failed || record.score === -1 || record.score === undefined) {
-      return 'X/5';
-    }
-    return `${record.score}/5`;
-  }
-
-  // Fallback: just return score as string
-  return `${record.score}`;
+  // If no score type found, fallback to generic label
+  return 'Score';
 }
 
 interface GameCardProps {
@@ -206,24 +146,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
             <div className="game-card-score">
               <div className="score-display">
                 <span className="score-label">
-                  {game.displayName === 'Wordle' ? 'Guesses' :
-                   game.displayName === 'Quordle' ? 'Solved' :
-                   game.displayName === 'Pokedoku' ? 'Solved' :
-                   game.displayName === 'Connections' ? 'Solved' :
-                   game.displayName === 'Worldle' ? 'Proximity' :
-                   game.displayName === 'Timingle' ? 'Seconds' :
-                   game.displayName === 'Hexcodle' ? 'Guesses' :
-                   game.displayName === 'Colorguesser' ? 'Score' :
-                   game.displayName === 'Spellcheck' ? 'Score' :
-                   game.displayName === 'Scrandle' ? 'Score' :
-                   game.displayName === 'r34dle' ? 'Score' :
-                   game.displayName === 'Colorfle' ? 'Guesses' :
-                   game.displayName === 'Nerdle' ? 'Guesses' :
-                   game.displayName === 'Angle' ? 'Guesses' :
-                   game.displayName === 'Wantedle' ? 'Time' :
-                   game.displayName === 'Gamedle' ? 'Solved' :
-                   game.displayName === 'Genshindle' ? 'Guesses' :
-                   'Score'}
+                  {getScoreLabel(game, record)}
                 </span>
                 <span className="score-value">{formatScore(record, game)}</span>
               </div>

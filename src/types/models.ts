@@ -16,6 +16,7 @@ export interface Game {
   customData?: Record<string, unknown>; // Extensible metadata
   resetTime: string; // UTC time when game resets in HH:MM format (e.g., "00:00")
   isAsynchronous: boolean; // Whether game resets based on user's local timezone (true) or UTC (false)
+  scoreTypes: Record<string, Record<string, number>>; // Score types and their max values e.g., {"puzzle1": {"attempts": 6}} or {"puzzle1": {"time": -1, "grade": -1}}
 }
 
 /**
@@ -26,7 +27,7 @@ export interface ShareTextEntry {
   shareText?: string; // The emoji grid/share text
   completed: boolean;
   failed: boolean;
-  score?: number;
+  // score?: number; // Legacy field removed, use scores in GameRecord
   additionalScores?: { label: string; value: number; maxValue?: number }[]; // For games with multiple score metrics (e.g., Pokedoku uniqueness)
   // Parsed data from shareTextParser (stored once, read many times)
   maxAttempts?: number; // Total attempts allowed (e.g., 6 for Wordle)
@@ -38,6 +39,7 @@ export interface ShareTextEntry {
   uniqueness?: number; // For Pokedoku: uniqueness score
   maxUniqueness?: number; // For Pokedoku: max uniqueness value
   grade?: string; // For Wantedle: letter grade (A-F)
+  // additionalScores?: { label: string; value: number; maxValue?: number }[]; // For games with multiple score metrics (e.g., Pokedoku uniqueness)
 }
 
 /**
@@ -50,9 +52,9 @@ export interface GameRecord {
   userId?: string; // Backend user ID (populated after migration)
   date: string; // ISO 8601 timestamp (full date+time) for puzzle period tracking
   completed: boolean; // Whether the game was completed
-  score?: number; // Score (e.g., 1-6 for Wordle attempts)
+  // score?: number; // Legacy score field removed, use scores instead
+  scores?: Record<string, Record<string, number>>; // Structured scores matching game's scoreTypes e.g., {"puzzle1": {"attempts": 5}}
   failed: boolean; // Whether the user failed to solve
-  timeSpent?: number; // Time in seconds
   metadata?: {
     shareTexts?: ShareTextEntry[]; // Multiple share texts for games with subtasks
     streakDay?: number;

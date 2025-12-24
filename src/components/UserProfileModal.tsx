@@ -89,6 +89,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   if (!isOpen) return null;
 
+  const isImage = typeof avatarUrl === 'string' && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
   return (
     <div
       style={{
@@ -122,12 +123,30 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       >
         {/* Header */}
         <div className="mb-6 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl">
-            {avatarUrl || '😊'}
-          </div>
+          {isImage ? (
+            <a
+              href={`/ManageDle/profile/${encodeURIComponent(displayName)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View public profile"
+              style={{ display: 'inline-block' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={avatarUrl!}
+                alt="Profile"
+                className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
+                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
+                title="Profile picture"
+              />
+            </a>
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl text-gray-400">
+              No Image
+            </div>
+          )}
           <div>
-            <h2 className="text-2xl font-bold">{displayName}</h2>
-            <p className="text-gray-600 text-sm">Public Profile</p>
+            <h2 className="text-2xl font-bold" style={{ margin: '0.5em' }}>{displayName}</h2>
           </div>
         </div>
 

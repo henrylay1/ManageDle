@@ -137,7 +137,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             shareText: score !== undefined ? '(parsed from summary)' : '',
             completed: score !== undefined,
             failed: false,
-            score: score,
+            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
           };
         });
         setShareTexts(newShareTexts);
@@ -158,7 +158,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             shareText: score !== undefined ? '(parsed from summary)' : '',
             completed: score !== undefined,
             failed: false,
-            score: score,
+            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
           };
         });
         setShareTexts(newShareTexts);
@@ -188,7 +188,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             shareText: hasPuzzle ? `(parsed from summary #${puzzleNumber})` : '',
             completed: score !== undefined,
             failed: hasPuzzle && score === undefined,
-            score: score,
+            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
             maxAttempts: maxAttemptsMap[modeName],
           };
         });
@@ -217,9 +217,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         if (parsed && !('error' in parsed)) {
           updated[index].completed = parsed.completed;
           updated[index].failed = parsed.failed;
-          if (parsed.score !== undefined && parsed.score !== null) {
-            updated[index].score = parsed.score;
-          }
           
           // Parse full data and store all parsed fields for future use (no re-parsing in GameCard)
           const fullParsed = parseShareText(text, game.displayName);
@@ -234,10 +231,47 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             updated[index].uniqueness = fullParsed.uniqueness;
             updated[index].maxUniqueness = fullParsed.maxUniqueness;
             
-            // For Worldle, use percentage as main score instead of guess number
-            if (game.displayName === 'Worldle' && fullParsed.percentage) {
-              updated[index].score = fullParsed.percentage;
+            // Build scores object from parsed data for DB storage
+            // Transform to use the correct score type key from game.scoreTypes
+            let parsedScores = fullParsed.scores;
+            if (!parsedScores && fullParsed.score !== undefined) {
+              // Construct scores from legacy score field
+              parsedScores = { puzzle1: { attempts: fullParsed.score } };
             }
+            
+            // Transform score keys to match game.scoreTypes
+            if (parsedScores && game.scoreTypes) {
+              const transformedScores: Record<string, Record<string, number | undefined>> = {};
+              for (const [puzzleKey, puzzleScores] of Object.entries(parsedScores)) {
+                const gameScoreTypes = game.scoreTypes[puzzleKey];
+                if (gameScoreTypes) {
+                  // For Worldle, map both 'accuracy' and 'attempts' if present
+                  if (game.displayName === 'Worldle' && puzzleKey === 'puzzle1') {
+                    transformedScores[puzzleKey] = {};
+                    if ('accuracy' in gameScoreTypes && typeof fullParsed.percentage === 'number') {
+                      transformedScores[puzzleKey]['accuracy'] = fullParsed.percentage;
+                    }
+                    if ('attempts' in gameScoreTypes && typeof fullParsed.guessCount === 'number') {
+                      transformedScores[puzzleKey]['attempts'] = fullParsed.guessCount;
+                    }
+                  } else {
+                    // Default: map the first score value to the first score type key
+                    const scoreTypeKey = Object.keys(gameScoreTypes)[0];
+                    if (scoreTypeKey) {
+                      const parsedValue = Object.values(puzzleScores)[0];
+                      transformedScores[puzzleKey] = { [scoreTypeKey]: parsedValue };
+                    } else {
+                      transformedScores[puzzleKey] = puzzleScores;
+                    }
+                  }
+                } else {
+                  transformedScores[puzzleKey] = puzzleScores;
+                }
+              }
+              parsedScores = transformedScores;
+            }
+            
+            (updated[index] as any).scores = parsedScores;
             
             // For Pokedoku, store uniqueness in additionalScores for display
             if (game.displayName === 'Pokedoku' && fullParsed.uniqueness !== undefined && fullParsed.maxUniqueness !== undefined) {
@@ -249,9 +283,9 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             }
             
             // For Quordle, store max guess number in additionalScores
-            // Guesses show as n/9 if all 4 solved, or X/9 if any failed
             if (game.displayName === 'Quordle') {
-              const allSolved = fullParsed.score === 4;
+              const solved = fullParsed.score; // Quordle uses score for number solved
+              const allSolved = solved === 4;
               updated[index].additionalScores = [{
                 label: 'Guesses',
                 value: allSolved ? (fullParsed.maxGuessNumber || -1) : -1,
@@ -268,13 +302,10 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               }];
             }
             
-            // For Hexcodle, store guesses as main and score (percentage) in additionalScores
+            // For Hexcodle, store percentage in additionalScores
             if (game.displayName === 'Hexcodle') {
-              // Store guesses as main score (-1 for failed)
-              updated[index].score = fullParsed.failed ? -1 : (fullParsed.guessCount || -1);
               updated[index].failed = fullParsed.failed;
               updated[index].maxAttempts = 5;
-              // Store percentage in additionalScores
               updated[index].additionalScores = [{
                 label: 'Score',
                 value: fullParsed.percentage ?? 0,
@@ -282,17 +313,17 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               }];
             }
             
-            // For Colorfle, always store both guesses and accuracy
+            // For Colorfle, store accuracy in additionalScores
             if (game.displayName === 'Colorfle') {
-              updated[index].score = fullParsed.score;
               updated[index].maxAttempts = fullParsed.maxAttempts;
               updated[index].failed = fullParsed.failed;
-              updated[index].additionalScores = (fullParsed as any).additionalScores || [];
+              // Filter out undefined values from additionalScores
+              updated[index].additionalScores = (fullParsed.additionalScores || [])
+                .filter((s): s is { label: string; value: number; maxValue?: number } => s.value !== undefined);
             }
             
-            // For Wantedle, store grade and time separately
+            // For Wantedle, store grade
             if (game.displayName === 'Wantedle') {
-              updated[index].score = fullParsed.score; // Time in milliseconds
               updated[index].grade = fullParsed.grade;
             }
 
@@ -372,21 +403,55 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       const allGamedleComplete = game.displayName === 'Gamedle' && shareTexts.length > 1
         ? shareTexts.every(st => st.completed || st.failed || (st.shareText && st.shareText.length > 0))
         : false;
-      
-      // Calculate overall score
-      // For multiple share texts: sum of all scores (only for numeric scores)
-      // For single share text: just use that score
-      const entriesWithScore = shareTexts.filter(st => st.score !== undefined && st.score !== null);
-      let totalScore: number | string | undefined;
-      
-      if (entriesWithScore.length === 0) {
-        totalScore = undefined;
-      } else if (entriesWithScore.length === 1 || typeof entriesWithScore[0].score === 'string') {
-        // Single entry or string score (like Wantedle "B - 19.2s") - use as-is
-        totalScore = entriesWithScore[0].score;
-      } else {
-        // Multiple numeric scores - sum them
-        totalScore = entriesWithScore.reduce((sum, st) => sum + (Number(st.score) || 0), 0);
+
+      // Build scores object from ShareTextEntries
+      // For single-puzzle games: use the first entry's scores
+      // For multi-puzzle games: merge all entries' scores with unique keys
+      let recordScores: Record<string, Record<string, number>> | undefined;
+      if (shareTexts.length === 1 && (shareTexts[0] as any).scores) {
+        // Filter out undefined values from scores
+        const rawScores = (shareTexts[0] as any).scores;
+        recordScores = {};
+        for (const [puzzleKey, puzzleScores] of Object.entries(rawScores)) {
+          recordScores[puzzleKey] = {};
+          for (const [scoreKey, scoreVal] of Object.entries(puzzleScores as Record<string, number | undefined>)) {
+            if (scoreVal !== undefined) {
+              recordScores[puzzleKey][scoreKey] = scoreVal;
+            }
+          }
+        }
+      } else if (shareTexts.length > 1) {
+        recordScores = {};
+        shareTexts.forEach((st, idx) => {
+          const stScores = (st as any).scores;
+          if (stScores) {
+            // Use puzzle index as key for multi-puzzle games
+            const puzzleKey = `puzzle${idx + 1}`;
+            // If stScores has puzzle1, rename it to the correct puzzle key
+            if (stScores.puzzle1) {
+              // Filter out undefined values
+              recordScores![puzzleKey] = {};
+              for (const [scoreKey, scoreVal] of Object.entries(stScores.puzzle1 as Record<string, number | undefined>)) {
+                if (scoreVal !== undefined) {
+                  recordScores![puzzleKey][scoreKey] = scoreVal;
+                }
+              }
+            } else {
+              // Otherwise just merge all keys, filtering undefined
+              for (const [pk, pv] of Object.entries(stScores)) {
+                recordScores![pk] = {};
+                for (const [sk, sv] of Object.entries(pv as Record<string, number | undefined>)) {
+                  if (sv !== undefined) {
+                    recordScores![pk][sk] = sv;
+                  }
+                }
+              }
+            }
+          }
+        });
+        if (Object.keys(recordScores).length === 0) {
+          recordScores = undefined;
+        }
       }
 
       const recordData = {
@@ -394,7 +459,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         date: new Date().toISOString(), // Store full timestamp for puzzle period tracking
         completed: shareTexts.length > 1 ? (allGamedleComplete || allCompleted) : shareTexts[0].completed,
         failed: shareTexts.length > 1 ? (anyCompleted && anyFailed) : shareTexts[0].failed,
-        score: totalScore,
+        scores: recordScores,
         metadata: {
           shareTexts: shareTexts,
           hasInvalidShareText: false,
@@ -471,14 +536,19 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               />
               <div className="summary-results">
                 <h4>Parsed Results:</h4>
-                {shareTexts.map((entry, index) => (
-                  <div key={index} className="summary-result-item">
-                    <span className="result-name">{entry.name}:</span>
-                    <span className="result-score">
-                      {entry.failed ? 'X' : (entry.completed ? (entry.score !== undefined ? `${entry.score}` : '✓') : '-')}
-                    </span>
-                  </div>
-                ))}
+                {shareTexts.map((entry, index) => {
+                  // Extract display score from scores object
+                  const entryScores = (entry as any).scores?.puzzle1;
+                  const displayScore = entryScores?.attempts ?? entryScores?.solved ?? entryScores?.time ?? entryScores?.percentage;
+                  return (
+                    <div key={index} className="summary-result-item">
+                      <span className="result-name">{entry.name}:</span>
+                      <span className="result-score">
+                        {entry.failed ? 'X' : (entry.completed ? (displayScore !== undefined ? `${displayScore}` : '✓') : '-')}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -564,24 +634,35 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                     <div style={{ display: 'flex', gap: '0.5em', alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <label style={{ fontSize: '0.8em', color: '#aaa' }}>{getScoreLabel(game.displayName)}</label>
-                        <input
-                          type="text"
-                          className="score-input-small"
-                          value={
-                            game.displayName === 'Wantedle'
-                              ? (typeof entry.score === 'number' && !entry.failed
-                                  ? `${(entry.score / 1000).toFixed(1)}s`
-                                  : entry.failed ? 'X' : '')
-                              : typeof entry.score === 'number'
-                                ? (entry.failed
-                                    ? 'X'
-                                    : entry.score + (entry.shareText?.match(/\/(\d+)/)?.[1] ? `/${entry.shareText?.match(/\/(\d+)/)?.[1]}` : ''))
-                                : ''
+                        {(() => {
+                          // Extract primary score from scores object for display
+                          const entryScores = (entry as any).scores?.puzzle1;
+                          const primaryScore = entryScores?.attempts ?? entryScores?.solved ?? entryScores?.time ?? entryScores?.percentage ?? entryScores?.correct;
+                          const maxAttempts = entry.maxAttempts || entry.shareText?.match(/\/(\d+)/)?.[1];
+                          
+                          let displayValue = '';
+                          if (game.displayName === 'Wantedle') {
+                            const timeMs = entryScores?.time;
+                            displayValue = typeof timeMs === 'number' && !entry.failed
+                              ? `${(timeMs / 1000).toFixed(1)}s`
+                              : entry.failed ? 'X' : '';
+                          } else if (typeof primaryScore === 'number') {
+                            displayValue = entry.failed
+                              ? 'X'
+                              : `${primaryScore}${maxAttempts ? `/${maxAttempts}` : ''}`;
                           }
-                          placeholder={getScoreLabel(game.displayName)}
-                          readOnly
-                          style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
-                        />
+                          
+                          return (
+                            <input
+                              type="text"
+                              className="score-input-small"
+                              value={displayValue}
+                              placeholder={getScoreLabel(game.displayName)}
+                              readOnly
+                              style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
+                            />
+                          );
+                        })()}
                       </div>
                     </div>
                     

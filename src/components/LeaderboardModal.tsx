@@ -196,9 +196,19 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                           })}
                           className="flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 hover:bg-blue-100 hover:scale-110 active:scale-95 font-medium"
                         >
-                          <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lg flex-shrink-0">
-                            {entry.avatarUrl || '😊'}
-                          </div>
+                          {typeof entry.avatarUrl === 'string' && (entry.avatarUrl.startsWith('http://') || entry.avatarUrl.startsWith('https://')) ? (
+                            <img
+                              src={entry.avatarUrl}
+                              alt="Profile"
+                              className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lg flex-shrink-0"
+                              style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
+                              title="Profile picture"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lg flex-shrink-0 text-gray-400">
+                              No Image
+                            </div>
+                          )}
                           <span className={isCurrentUser ? 'font-semibold' : ''}>
                             {entry.displayName}
                             {isCurrentUser && ' (You)'}

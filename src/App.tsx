@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAppStore } from './store/appStore';
 import Dashboard from './components/Dashboard';
+import ProfilePage from '@/components/ProfilePage';
 import './App.css';
 
 function App() {
@@ -20,9 +22,14 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <Dashboard />
-    </div>
+    <BrowserRouter basename="/ManageDle">
+      <div className="app">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/profile/:displayname" element={<ProfilePage />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 

@@ -6,6 +6,17 @@ import type { Game, GameRecord } from '@/types/models';
  * Supabase storage adapter for cloud data persistence
  */
 export class SupabaseStorageAdapter implements IStorageAdapter {
+    async deleteRecord(recordId: string): Promise<boolean> {
+      const { error } = await supabase
+        .from('game_records')
+        .delete()
+        .eq('record_id', recordId);
+      if (error) {
+        console.error('[SupabaseAdapter] Failed to delete record:', error);
+        return false;
+      }
+      return true;
+    }
   private userId: string;
 
   constructor(userId: string) {
@@ -110,6 +121,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           is_failable: game.isFailable,
           reset_time: game.resetTime || '00:00',
           is_asynchronous: game.isAsynchronous ?? false,
+          score_types: game.scoreTypes,
         };
       });
 
@@ -137,10 +149,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       console.error('Failed to fetch records:', error);
       return [];
     }
-    
     const mappedRecords = (data || []).map(record => this.mapDbRecordToRecord(record));
-
-
     return mappedRecords;
   }
 
@@ -157,12 +166,13 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, ...rest }) => rest);
         }
         // Build dbRecord, omitting share_text if mainShareText is null or undefined
+        console.log(record);
         const dbRecord: any = {
           record_id: record.recordId,
           user_id: this.userId,
           game_id: record.gameId,
           date: record.date,
-          score: record.score ?? null,
+          scores: record.scores ?? null,
           completed: record.completed,
           failed: record.failed,
           metadata: cleanedMetadata && Object.keys(cleanedMetadata).length > 0 ? cleanedMetadata : null,
@@ -170,6 +180,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
         if (mainShareText !== null && mainShareText !== undefined) {
           dbRecord.share_text = mainShareText;
         }
+        console.log('[SupabaseAdapter] Uploading scores:', dbRecord.scores);
         const { error } = await supabase
           .from('game_records')
           .upsert([dbRecord], { onConflict: 'record_id' });
@@ -202,20 +213,32 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       customData: dbGame.custom_data || undefined,
       resetTime: dbGame.reset_time || '00:00',
       isAsynchronous: dbGame.is_asynchronous ?? false,
+      scoreTypes: dbGame.score_types || {},
     };
   }
 
   private mapDbRecordToRecord(dbRecord: any): GameRecord {
+    // Restore share_text from database back into metadata.shareTexts
+    let metadata = dbRecord.metadata ? { ...dbRecord.metadata } : undefined;
+    
+    // If share_text exists in DB, restore it to the first shareTexts entry
+    if (dbRecord.share_text && metadata && Array.isArray(metadata.shareTexts) && metadata.shareTexts.length > 0) {
+      metadata.shareTexts[0] = {
+        ...metadata.shareTexts[0],
+        shareText: dbRecord.share_text
+      };
+    }
+    
     return {
       recordId: dbRecord.record_id,
       gameId: dbRecord.game_id,
       localId: this.userId,
       userId: this.userId,
       date: dbRecord.date,
-      score: dbRecord.score,
+      scores: dbRecord.scores ?? undefined,
       completed: dbRecord.completed,
       failed: dbRecord.failed,
-      metadata: dbRecord.metadata || undefined,
+      metadata: metadata,
       createdAt: dbRecord.created_at,
       updatedAt: dbRecord.created_at,
     };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/appStore';
 import { PfpOverlay } from './PfpOverlay';
 import './GameCard.css';
@@ -9,12 +10,9 @@ interface AccountMenuProps {
 }
 
 export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showPfpOverlay, setShowPfpOverlay] = useState(false);
-
-  // Reset pfp overlay state when menu is closed
   const handleClose = () => {
-    setShowPfpOverlay(false);
     onClose();
   };
   
@@ -23,20 +21,8 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
   const logout = useAppStore(state => state.logout);
   const updateProfile = useAppStore(state => state.updateProfile);
   
-  // Use emoji from authUser.avatarUrl or default to smile
-  const [selectedEmoji, setSelectedEmoji] = useState(authUser?.avatarUrl || '😊');
-
-  const handleEmojiSelect = async (emoji: string) => {
-    setSelectedEmoji(emoji);
-    
-    if (authUser) {
-      try {
-        await updateProfile(authUser.displayName || authUser.email, emoji);
-      } catch (error) {
-        console.error('Failed to update profile picture:', error);
-      }
-    }
-  };
+  // Show image if avatarUrl is a URL
+  const isImage = typeof authUser?.avatarUrl === 'string' && (authUser.avatarUrl.startsWith('http://') || authUser.avatarUrl.startsWith('https://'));
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -50,19 +36,18 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
     }
   };
 
+  const handleViewProfile = () => {
+    if (authUser?.displayName) {
+      navigate(`/profile/${authUser.displayName}`);
+    } else {
+      navigate('/profile');
+    }
+    onClose();
+  };
+
   if (!isOpen || !isAuthenticated || !authUser) return null;
 
-  // Show PfpOverlay instead of AccountMenu when pfp overlay is active
-  if (showPfpOverlay) {
-    return (
-      <PfpOverlay
-        onBackToMenu={() => setShowPfpOverlay(false)}
-        onCloseAll={handleClose}
-        onEmojiSelect={handleEmojiSelect}
-        currentEmoji={selectedEmoji}
-      />
-    );
-  }
+
 
   return (
     <div style={{
@@ -105,13 +90,23 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
         <div className="mb-6">
           <div className="flex items-center mb-4">
             <div className="relative mr-4">
-              <button
-                onClick={() => setShowPfpOverlay(true)}
-                className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl hover:opacity-80 transition-opacity cursor-pointer"
-                title="Click to change profile picture"
-              >
-                {selectedEmoji}
-              </button>
+              {isImage && (
+                <img
+                  src={authUser.avatarUrl}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
+                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
+                  title="Profile picture"
+                />
+              )}
+              {!isImage && (
+                <div
+                  className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
+                  title="Profile picture"
+                >
+                  <span className="text-gray-400">No Image</span>
+                </div>
+              )}
             </div>
             
             <div>
@@ -126,6 +121,13 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
             </p>
           </div>
         </div>
+
+        <button
+          onClick={handleViewProfile}
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 mb-3"
+        >
+          View Profile
+        </button>
 
         <button
           onClick={handleLogout}

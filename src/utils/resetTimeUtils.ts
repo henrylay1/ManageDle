@@ -117,6 +117,19 @@ export function getLastResetTime(game: Game): Date {
 export function isCurrentPuzzle(recordDate: string, game: Game): boolean {
   const recordTime = new Date(recordDate);
   const lastReset = getLastResetTime(game);
-  
+
+  // If recordDate is date-only (YYYY-MM-DD), treat as current if it matches today in the game's reset timezone
+  if (/^\d{4}-\d{2}-\d{2}$/.test(recordDate)) {
+    // Get today in the game's reset timezone
+    let now = new Date();
+    let todayStr;
+    if (game.isAsynchronous) {
+      todayStr = now.toISOString().slice(0, 10); // local date as ISO string
+    } else {
+      todayStr = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
+    }
+    return recordDate === todayStr;
+  }
+  // Otherwise, use timestamp comparison
   return recordTime >= lastReset;
 }
