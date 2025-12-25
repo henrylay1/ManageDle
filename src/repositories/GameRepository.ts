@@ -153,6 +153,7 @@ export class GameRepository {
           addedAt: new Date().toISOString(),
           resetTime: dbGame.reset_time || '00:00',
           isAsynchronous: dbGame.is_asynchronous ?? false,
+          scoreTypes: dbGame.score_types || { puzzle1: { attempts: 6 } },
         }));
         
         await this.storage.setAll('games', gamesToAdd);

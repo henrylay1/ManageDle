@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store/appStore';
-import { PfpOverlay } from './PfpOverlay';
 import './GameCard.css';
 
 interface AccountMenuProps {
@@ -19,7 +18,6 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
   const authUser = useAppStore(state => state.authUser);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
   const logout = useAppStore(state => state.logout);
-  const updateProfile = useAppStore(state => state.updateProfile);
   
   // Show image if avatarUrl is a URL
   const isImage = typeof authUser?.avatarUrl === 'string' && (authUser.avatarUrl.startsWith('http://') || authUser.avatarUrl.startsWith('https://'));
@@ -92,7 +90,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
             <div className="relative mr-4">
               {isImage && (
                 <img
-                  src={authUser.avatarUrl}
+                  src={authUser.avatarUrl || undefined}
                   alt="Profile"
                   className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
                   style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: 'black' }}

@@ -23,7 +23,7 @@ interface ActivityHeatmapProps {
 }
 
 export default function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
-  const { isAuthenticated, authUser } = useAppStore();
+  const {} = useAppStore();
   const [records, setRecords] = useState<GameRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

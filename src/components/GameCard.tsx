@@ -13,21 +13,16 @@ function formatScore(record: GameRecord, game: Game): string {
     // Get the first puzzle key (e.g., "puzzle1")
     const puzzleKeys = Object.keys(record.scores);
     if (puzzleKeys.length === 0) return 'N/A';
-    
     const firstPuzzle = puzzleKeys[0];
     const actualScores = record.scores[firstPuzzle];
     const maxScores = game.scoreTypes[firstPuzzle];
-    
     if (!actualScores || !maxScores) return 'N/A';
-    
     // Get the primary score type (first key in the score object)
     const scoreTypes = Object.keys(maxScores);
     if (scoreTypes.length === 0) return 'N/A';
-    
     const primaryType = scoreTypes[0];
     const actualValue = actualScores[primaryType];
     const maxValue = maxScores[primaryType];
-    
     // Handle different score types
     if (primaryType === 'attempts' || primaryType === 'solved' || primaryType === 'points') {
       if (maxValue === -1) {
@@ -48,9 +43,9 @@ function formatScore(record: GameRecord, game: Game): string {
       // Letter grade
       return String(actualValue);
     }
-    
     return String(actualValue);
   }
+  return 'N/A';
 }
 
 /**
@@ -176,34 +171,17 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
               /* Multiple share texts - show only names and scores */
               <div className="share-texts-container">
                 {record.metadata.shareTexts.map((entry, i) => {
-                  // Format individual subtask scores from stored parsed data
-                  let scoreDisplay = '';
-                  if (entry.completed && (entry.score !== undefined && entry.score !== null)) {
-                    // Check if this is a game with special scoring
-                    if (game.displayName === 'Hexcodle') {
-                      scoreDisplay = `${entry.score}%`;
-                    } else if (game.displayName === 'Timingle') {
-                      scoreDisplay = `${entry.score}s`;
-                    } else if (game.displayName === 'Pokedoku' && entry.maxAttempts) {
-                      scoreDisplay = `${entry.score}/${entry.maxAttempts}`;
-                      if (entry.uniqueness !== undefined && entry.maxUniqueness) {
-                        scoreDisplay += ` • ${entry.uniqueness}/${entry.maxUniqueness}`;
-                      }
-                    } else if (game.displayName === 'Gamedle' && entry.maxAttempts) {
-                      scoreDisplay = `${entry.score}/${entry.maxAttempts}`;
-                    } else {
-                      scoreDisplay = String(entry.score);
-                    }
+                  // ShareTextEntry does not have scores, fallback to N/A
+                  let scoreDisplay = 'N/A';
+                  if (entry.completed) {
+                    scoreDisplay = '✓';
                   } else if (game.displayName === 'Gamedle' && entry.failed && entry.maxAttempts) {
-                    // Show X/max for failed Gamedle subpuzzles
                     scoreDisplay = `X/${entry.maxAttempts}`;
                   }
-                  
                   // For Gamedle, both completed and failed (with shareText) are considered complete
                   const hasShareText = entry.shareText && entry.shareText.length > 0;
                   const isGamedleComplete = game.displayName === 'Gamedle' && hasShareText;
                   const displayAsComplete = entry.completed || entry.failed || isGamedleComplete;
-                  
                   return (
                     <div key={i} className={`share-text-entry-preview ${displayAsComplete ? (entry.failed ? 'failed' : 'success') : 'pending'}`}>
                       <div className="entry-preview-name">{entry.name}</div>

@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [showPfpPicker, setShowPfpPicker] = useState(false);
   const [pfpOptions, setPfpOptions] = useState<string[]>([]);
   const updateProfile = useAppStore(state => state.updateProfile);
-  const { user, authUser, isAuthenticated } = useAppStore();
+  const { user, authUser } = useAppStore();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
   const navigate = useNavigate();

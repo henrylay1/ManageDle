@@ -25,15 +25,31 @@ export class StatsService {
     const { currentStreak, maxStreak } = this.calculateStreaks(records);
     
     // Calculate average score (only for completed games)
-    const completedRecords = records.filter(r => r.completed && !r.failed && r.score);
+    // Use the first score type in scores for calculations
+    const getPrimaryScore = (r: GameRecord): number => {
+      if (r.scores) {
+        const puzzleKeys = Object.keys(r.scores);
+        if (puzzleKeys.length > 0) {
+          const scoreObj = r.scores[puzzleKeys[0]];
+          const scoreTypeKeys = Object.keys(scoreObj);
+          if (scoreTypeKeys.length > 0) {
+            const val = scoreObj[scoreTypeKeys[0]];
+            return typeof val === 'number' ? val : 0;
+          }
+        }
+      }
+      return 0;
+    };
+
+    const completedRecords = records.filter(r => r.completed && !r.failed && getPrimaryScore(r) !== undefined);
     const averageScore = completedRecords.length > 0
-      ? completedRecords.reduce((sum, r) => sum + (r.score || 0), 0) / completedRecords.length
+      ? completedRecords.reduce((sum, r) => sum + getPrimaryScore(r), 0) / completedRecords.length
       : 0;
-    
+
     // Score distribution
     const scoreDistribution: Record<string, number> = {};
     completedRecords.forEach(r => {
-      const score = String(r.score || 0);
+      const score = String(getPrimaryScore(r));
       scoreDistribution[score] = (scoreDistribution[score] || 0) + 1;
     });
     

@@ -40,6 +40,7 @@ function AddGameModal({ onClose }: AddGameModalProps) {
         isFailable,
         resetTime: '00:00', // Default to midnight UTC
         isAsynchronous: true,
+        scoreTypes: { puzzle1: { attempts: 6 } }, // Default, should be customized as needed
       });
 
       onClose();

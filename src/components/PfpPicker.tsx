@@ -1,8 +1,14 @@
 import { useEffect } from 'react';
 
-export function PfpPicker({ pfps, onSelect, onClose }) {
+interface PfpPickerProps {
+  pfps: string[];
+  onSelect: (url: string) => void;
+  onClose: () => void;
+}
+
+export function PfpPicker({ pfps, onSelect, onClose }: PfpPickerProps) {
   useEffect(() => {
-    const handleEsc = (e) => {
+    const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleEsc);
@@ -21,7 +27,7 @@ export function PfpPicker({ pfps, onSelect, onClose }) {
       }} onClick={e => e.stopPropagation()}>
         <h2 style={{ marginBottom: 16 }}>Select a Profile Picture</h2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          {pfps.map((url, idx) => (
+          {pfps.map((url: string, idx: number) => (
             <img
               key={url + '-' + idx}
               src={url}
