@@ -33,7 +33,7 @@ export class LeaderboardService {
         .select(`
           user_id,
           game_id,
-          score,
+          scores,
           completed,
           failed,
           date,
@@ -46,7 +46,7 @@ export class LeaderboardService {
         .order('date', { ascending: false });
 
       if (error) {
-        console.error('Failed to fetch leaderboard:', error);
+        console.error('[LeaderboardService] Failed to fetch leaderboard:', error);
         return [];
       }
 
@@ -83,8 +83,8 @@ export class LeaderboardService {
         
         if (record.completed && !record.failed) {
           userStats.totalWins++;
-          if (record.score !== null) {
-            userStats.scores.push(record.score);
+          if (record.scores !== null) {
+            userStats.scores.push(record.scores);
           }
         }
         
@@ -136,9 +136,10 @@ export class LeaderboardService {
         return b.winRate - a.winRate;
       });
 
-      return entries.slice(0, limit);
+      const finalEntries = entries.slice(0, limit);
+      return finalEntries;
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.error('[LeaderboardService] Error fetching leaderboard:', error);
       return [];
     }
   }
@@ -155,12 +156,11 @@ export class LeaderboardService {
         .limit(1000);
 
       if (gamesError) {
-        console.error('Failed to fetch games:', gamesError);
+        console.error('[LeaderboardService] Failed to fetch games:', gamesError);
         return [];
       }
 
       const uniqueGameIds = [...new Set((gamesData || []).map(r => r.game_id))];
-
       // Fetch leaderboard for each game
       const leaderboards = await Promise.all(
         uniqueGameIds.map(async (gameId) => {
@@ -173,7 +173,8 @@ export class LeaderboardService {
         })
       );
 
-      return leaderboards.filter(lb => lb.entries.length > 0);
+      const filtered = leaderboards.filter(lb => lb.entries.length > 0);
+      return filtered;
     } catch (error) {
       console.error('Error fetching all leaderboards:', error);
       return [];

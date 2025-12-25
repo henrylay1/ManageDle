@@ -40,14 +40,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setError('');
 
     try {
-      // Fetch user stats from user_game_stats
-      const { data: statsData, error: statsError } = await supabase
-        .from('user_game_stats')
-        .select('game_id, total_wins, total_played')
+      // Fetch user's game records
+      const { data: recordsData, error: recordsError } = await supabase
+        .from('game_records')
+        .select('game_id, completed, failed')
         .eq('user_id', userId);
 
-      if (statsError) {
-        console.error('Failed to fetch user profile:', statsError);
+      if (recordsError) {
+        console.error('Failed to fetch user records:', recordsError);
         setError('Failed to load user profile');
         return;
       }
@@ -63,15 +63,28 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         return;
       }
 
+      // Aggregate stats by game_id
+      const statsMap = new Map<string, { wins: number; plays: number }>();
+      (recordsData || []).forEach(record => {
+        if (!statsMap.has(record.game_id)) {
+          statsMap.set(record.game_id, { wins: 0, plays: 0 });
+        }
+        const stat = statsMap.get(record.game_id)!;
+        stat.plays++;
+        if (record.completed && !record.failed) {
+          stat.wins++;
+        }
+      });
+
       // Build the stats with game info
       const stats: UserGameStats[] = [];
-      statsData?.forEach(statRow => {
-        const game = gamesData?.find(g => g.game_id === statRow.game_id);
+      statsMap.forEach((stat, gameId) => {
+        const game = gamesData?.find(g => g.game_id === gameId);
         stats.push({
-          gameId: statRow.game_id,
-          gameName: game?.name || statRow.game_id,
-          wins: statRow.total_wins,
-          plays: statRow.total_played,
+          gameId,
+          gameName: game?.name || gameId,
+          wins: stat.wins,
+          plays: stat.plays,
           icon: game?.icon || '🎮',
         });
       });

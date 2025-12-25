@@ -166,7 +166,6 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, ...rest }) => rest);
         }
         // Build dbRecord, omitting share_text if mainShareText is null or undefined
-        console.log(record);
         const dbRecord: any = {
           record_id: record.recordId,
           user_id: this.userId,
@@ -180,7 +179,6 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
         if (mainShareText !== null && mainShareText !== undefined) {
           dbRecord.share_text = mainShareText;
         }
-        console.log('[SupabaseAdapter] Uploading scores:', dbRecord.scores);
         const { error } = await supabase
           .from('game_records')
           .upsert([dbRecord], { onConflict: 'record_id' });

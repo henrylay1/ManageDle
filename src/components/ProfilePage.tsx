@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [showPfpPicker, setShowPfpPicker] = useState(false);
   const [pfpOptions, setPfpOptions] = useState<string[]>([]);
   const updateProfile = useAppStore(state => state.updateProfile);
-  const { user, authUser } = useAppStore();
+  const { user, authUser} = useAppStore();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -24,7 +24,6 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchPfps() { 
       const { data, error } = await supabase.storage.from('profile-pictures').list('');
-      console.debug('Fetched profile pictures from storage:', data, error);
       if (error) {
         console.error('Error fetching profile pictures:', error);
         setPfpOptions([]);
@@ -35,7 +34,6 @@ export default function ProfilePage() {
         .map(file =>
           supabase.storage.from('profile-pictures').getPublicUrl(file.name).data.publicUrl
         );
-      console.debug('Profile picture URLs:', urls);
       setPfpOptions(urls);
     }
     if (showPfpPicker) fetchPfps();

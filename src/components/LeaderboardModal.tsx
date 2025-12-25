@@ -72,14 +72,15 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           }
           return b.winRate - a.winRate;
         });
-        setLeaderboard(aggregated.slice(0, 100));
+        const sliced = aggregated.slice(0, 100);
+        setLeaderboard(sliced);
       } else {
         const entries = await leaderboardService.getGameLeaderboard(selectedGame, 100);
         setLeaderboard(entries);
       }
     } catch (err) {
       setError('Failed to load leaderboard');
-      console.error(err);
+      console.error('[LeaderboardModal] Error loading leaderboard:', err);
     } finally {
       setIsLoading(false);
     }

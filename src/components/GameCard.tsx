@@ -199,7 +199,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
               /* Single share text - show emoji grid if present, else fallback to shareText */
               (() => {
                 const entry = record.metadata.shareTexts[0];
-                const gridLines = entry.grid ? entry.grid.split('\n').map(line => line.trim()).filter(line => line.length > 0) : null;
+                const gridLines = entry.grid ? entry.grid.split('\n').map(line => line.trim()).filter(line => line.length > 0) : [];
                 return (
                   <div className="share-text-preview">
                     {entry.puzzleNumber && (
@@ -207,10 +207,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
                         #{entry.puzzleNumber}
                       </div>
                     )}
-                    {gridLines && gridLines.length > 0 && gridLines.map((line, i) => (
-                      <div key={i} className="share-text-line">{line}</div>
-                    ))}
-                    {!gridLines && entry.shareText && entry.shareText.split('\n').slice(0, 10).map((line, i) => (
+                    {gridLines.length > 0 && gridLines.map((line, i) => (
                       <div key={i} className="share-text-line">{line}</div>
                     ))}
                   </div>

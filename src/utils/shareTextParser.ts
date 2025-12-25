@@ -143,11 +143,12 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Extract emoji (single emoji line)
     const emojiLines = lines.filter(line => {
       const trimmed = line.trim();
-      return trimmed.length > 0 && /^[\u{1F300}-\u{1F9FF}]+$/u.test(trimmed);
+      // Match lines that are only emoji (including those with variation selectors, e.g., ⛄️)
+      // This regex matches one or more emoji, each optionally followed by a variation selector, with optional whitespace
+      return /^\s*(?:\p{Emoji}(?:\uFE0F)?)+\s*$/u.test(trimmed);
     });
-    if (emojiLines.length > 0) {
-      result.grid = emojiLines.join('\n');
-    }
+    // Always set grid, even if empty
+    result.grid = emojiLines.length > 0 ? emojiLines.join('\n') : '';
     
     return result;
   }

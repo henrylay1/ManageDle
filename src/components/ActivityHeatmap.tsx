@@ -16,7 +16,7 @@ interface CellData {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['Sun', 'M', 'Tue', 'W', 'Thu', 'F', 'Sat'];
 
 interface ActivityHeatmapProps {
   userId: string;
@@ -131,19 +131,28 @@ export default function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
 
   const getMonthLabels = () => {
     const labels: { month: string; weekIndex: number }[] = [];
-    let currentMonth = -1;
-    
-    cells.forEach(cell => {
+    let prevMonth = -1;
+    let prevMonthLastWeekIndex = -1;
+    let lastDayOfPrevMonth = null;
+
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
       const month = cell.date.getMonth();
-      if (month !== currentMonth && cell.dayOfWeek <= 3) { // Only show if near start of week
+      // Detect last day of previous month
+      if (prevMonth !== -1 && lastDayOfPrevMonth && cell.weekIndex > prevMonthLastWeekIndex) {
         labels.push({
           month: MONTHS[month],
           weekIndex: cell.weekIndex
         });
-        currentMonth = month;
+        lastDayOfPrevMonth = null;
       }
-    });
-    
+      // Update last day of month
+      if (new Date(cell.date.getFullYear(), cell.date.getMonth() + 1, 0).getDate() === cell.date.getDate()) {
+        prevMonthLastWeekIndex = cell.weekIndex;
+        lastDayOfPrevMonth = cell;
+        prevMonth = month;
+      }
+    }
     return labels;
   };
 
@@ -179,46 +188,53 @@ export default function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
         </div>
       </div>
       
-      <div className="heatmap-container">
-        <div className="heatmap-days-labels">
-          {DAYS.map((day, i) => (
-            i % 2 === 1 && ( // Only show Mon, Wed, Fri labels
-              <div key={day} className="day-label" style={{ gridRow: i + 1 }}>
-                {day}
-              </div>
-            )
-          ))}
-        </div>
-        
-        <div className="heatmap-content">
-          <div className="heatmap-months">
-            {monthLabels.map((label, i) => (
-              <div 
-                key={i} 
-                className="month-label" 
-                style={{ gridColumn: label.weekIndex + 1 }}
-              >
-                {label.month}
-              </div>
-            ))}
-          </div>
-          
-          <div className="heatmap-grid">
-            {cells.map((cell, i) => (
-              <div
-                key={i}
-                className={`heatmap-cell intensity-${getIntensityLevel(cell.count)}`}
-                style={{
-                  gridColumn: cell.weekIndex + 1,
-                  gridRow: cell.dayOfWeek + 1
-                }}
-                title={`${formatDate(cell.date)}: ${cell.count} ${cell.count === 1 ? 'game' : 'games'}`}
-                data-count={cell.count}
-                data-date={cell.date.toISOString().split('T')[0]}
-              />
-            ))}
-          </div>
-        </div>
+      <div className="heatmap-unified-grid">
+        {/* Month labels (row 1, columns 2+) */}
+        {monthLabels.map((label, i) => {
+          // Skip the first December label
+          if (i === 0 && label.month === 'Dec') return null;
+          return (
+            <div
+              key={`month-${i}`}
+              className="month-label"
+              style={{ gridColumn: label.weekIndex + 2, gridRow: 1 }}
+            >
+              {label.month}
+            </div>
+          );
+        })}
+
+        {/* Day labels (column 1, rows 2+) */}
+        {DAYS.map((day, i) => (
+          i % 2 === 1 && (
+            <div
+              key={`day-${day}`}
+              className="day-label"
+              style={{ gridRow: i + 2, gridColumn: 1 }}
+            >
+              {day}
+            </div>
+          )
+        ))}
+
+        {/* Heatmap cells (rows 2+, columns 2+) */}
+        {cells.map((cell, i) => {
+          const d = cell.date;
+          const isLastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === d.getDate();
+          return (
+            <div
+              key={i}
+              className={`heatmap-cell intensity-${getIntensityLevel(cell.count)}${isLastDayOfMonth ? ' heatmap-cell-last-of-month' : ''}`}
+              style={{
+                gridColumn: cell.weekIndex + 2,
+                gridRow: cell.dayOfWeek + 2
+              }}
+              title={`${formatDate(cell.date)}: ${cell.count} ${cell.count === 1 ? 'game' : 'games'}`}
+              data-count={cell.count}
+              data-date={cell.date.toISOString().split('T')[0]}
+            />
+          );
+        })}
       </div>
       
       <div className="heatmap-legend">
