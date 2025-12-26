@@ -534,8 +534,8 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       if (/streak/i.test(line) || line.trim().startsWith('🔥')) return false;
       // Skip any line that is a bonus round or non-emoji message
       if (/Worldle has a new bonus round/i.test(line)) return false;
-      // Only keep lines that are made up entirely of valid Worldle emojis (arrows, colored squares, and 🎉)
-      const emojiPattern = /^[⬆️⬇️⬅️➡️↗️↘️↙️↖️🟩🟨🟥🎉]+$/u;
+      // Only keep lines that are made up entirely of valid Worldle emojis (arrows, colored squares, white square, and 🎉)
+      const emojiPattern = /^[⬆️⬇️⬅️➡️↗️↘️↙️↖️🟩🟨🟥⬜🎉]+$/u;
       return emojiPattern.test(line.trim());
     });
     if (emojiLines.length > 0) {
@@ -637,14 +637,31 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
 
   // Hexcodle
   if (normalizedGameName === 'hexcodle') {
-    const hexcodleMatch = text.match(/Hexcodle\s+#([\d,]+).*?Score:\s*(\d+)%/is);
-    if (!hexcodleMatch) {
-      throw new Error('❌ Incorrect share text for Hexcodle. Expected format: "Hexcodle #...Score: %..."');
+    // Match both "in X!" for attempts and "Score: X%" for accuracy
+    const hexcodleMatch = text.match(/Hexcodle\s+#([\d,]+)\s+in\s+(\d+)!.*?Score:\s*(\d+)%/is);
+    // Also try without "in X!" for failed games: "I didn't get Hexcodle #869. Score: 69%"
+    const hexcodleFailedMatch = text.match(/(?:I\s+didn't\s+get\s+)?Hexcodle\s+#([\d,]+).*?Score:\s*(\d+)%/is);
+    
+    if (!hexcodleMatch && !hexcodleFailedMatch) {
+      throw new Error('❌ Incorrect share text for Hexcodle. Expected format: "Hexcodle #... in X! Score: %..."');
     }
-    const [, puzzleNumber, percentStr] = hexcodleMatch;
+    
+    let puzzleNumber: string;
+    let attempts: number | undefined;
+    let percent: number;
+    
+    if (hexcodleMatch) {
+      [, puzzleNumber, , ] = hexcodleMatch;
+      attempts = parseInt(hexcodleMatch[2], 10);
+      percent = parseInt(hexcodleMatch[3], 10);
+    } else {
+      [, puzzleNumber, ] = hexcodleFailedMatch!;
+      percent = parseInt(hexcodleFailedMatch![2], 10);
+      attempts = undefined; // Failed, no successful attempts
+    }
+    
     result.gameName = 'Hexcodle';
     result.puzzleNumber = puzzleNumber;
-    const percent = parseInt(percentStr, 10);
     result.percentage = percent;
     result.completed = true;
     
@@ -665,18 +682,19 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Check if last row is all checkmarks (solved)
     const isLastRowAllCheckmarks = lastRow.length > 0 && [...lastRow].every(ch => ch === '✅' || /\s/.test(ch));
     
-    // Failed if 5 rows and last row is not all checkmarks
-    result.failed = numRows === 5 && !isLastRowAllCheckmarks;
+    // Failed if 5 rows and last row is not all checkmarks, or if no "in X!" found
+    result.failed = (numRows === 5 && !isLastRowAllCheckmarks) || attempts === undefined;
     
     // Guesses: number of rows if solved, undefined if failed
     result.guessCount = result.failed ? undefined : numRows;
     result.maxAttempts = 5;
     result.score = percent; // Keep score as percentage for compatibility
     
-    // Store all scores in scores field: percentage (accuracy)
+    // Store all scores in scores field: accuracy and attempts
     result.scores = {
       puzzle1: {
-        accuracy: percent
+        accuracy: percent,
+        attempts: attempts // Will be undefined if failed
       }
     };
     

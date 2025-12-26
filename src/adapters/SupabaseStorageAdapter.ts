@@ -157,15 +157,25 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
     // Upsert only the provided records (single or multiple), do not touch others
     if (records.length > 0) {
       for (const record of records) {
-        // Extract main share text if available
-        let mainShareText = null;
+        // Extract share texts as JSON object with puzzle names as keys (excluding SUMMARY)
+        let shareTextJson: Record<string, string> | null = null;
         let cleanedMetadata = record.metadata ? { ...record.metadata } : null;
         if (cleanedMetadata && Array.isArray(cleanedMetadata.shareTexts) && cleanedMetadata.shareTexts.length > 0) {
-          mainShareText = cleanedMetadata.shareTexts[0].shareText || null;
-          // Remove shareText from each entry
+          shareTextJson = {};
+          cleanedMetadata.shareTexts.forEach((entry) => {
+            // Include all share texts, including SUMMARY
+            if (entry.shareText) {
+              shareTextJson![entry.name] = entry.shareText;
+            }
+          });
+          // If no share texts were added, set to null
+          if (Object.keys(shareTextJson).length === 0) {
+            shareTextJson = null;
+          }
+          // Remove shareText from each entry in metadata
           cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, ...rest }) => rest);
         }
-        // Build dbRecord, omitting share_text if mainShareText is null or undefined
+        // Build dbRecord, omitting share_text if shareTextJson is null
         const dbRecord: any = {
           record_id: record.recordId,
           user_id: this.userId,
@@ -176,8 +186,8 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           failed: record.failed,
           metadata: cleanedMetadata && Object.keys(cleanedMetadata).length > 0 ? cleanedMetadata : null,
         };
-        if (mainShareText !== null && mainShareText !== undefined) {
-          dbRecord.share_text = mainShareText;
+        if (shareTextJson !== null) {
+          dbRecord.share_text = shareTextJson;
         }
         const { error } = await supabase
           .from('game_records')
@@ -220,12 +230,20 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
     // Restore share_text from database back into metadata.shareTexts
     let metadata = dbRecord.metadata ? { ...dbRecord.metadata } : undefined;
     
-    // If share_text exists in DB, restore it to the first shareTexts entry
+    // If share_text exists in DB, restore it to the corresponding shareTexts entries
     if (dbRecord.share_text && metadata && Array.isArray(metadata.shareTexts) && metadata.shareTexts.length > 0) {
-      metadata.shareTexts[0] = {
-        ...metadata.shareTexts[0],
-        shareText: dbRecord.share_text
-      };
+      // share_text is now a JSON object with puzzle names as keys
+      const shareTextJson = typeof dbRecord.share_text === 'string' 
+        ? { puzzle1: dbRecord.share_text } // Legacy: single string becomes puzzle1
+        : dbRecord.share_text;
+      
+      metadata.shareTexts = metadata.shareTexts.map((entry: any) => {
+        const shareText = shareTextJson[entry.name];
+        if (shareText) {
+          return { ...entry, shareText };
+        }
+        return entry;
+      });
     }
     
     return {

@@ -89,7 +89,14 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       failed: record.failed,
       share_text: (() => {
         if (record.metadata && Array.isArray(record.metadata.shareTexts) && record.metadata.shareTexts.length > 0) {
-          return record.metadata.shareTexts[0].shareText || null;
+          const shareTextJson: Record<string, string> = {};
+          record.metadata.shareTexts.forEach(entry => {
+            // Include all share texts, including SUMMARY
+            if (entry.shareText) {
+              shareTextJson[entry.name] = entry.shareText;
+            }
+          });
+          return Object.keys(shareTextJson).length > 0 ? shareTextJson : null;
         }
         return null;
       })(),

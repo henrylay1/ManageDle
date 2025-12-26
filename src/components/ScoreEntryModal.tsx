@@ -16,35 +16,32 @@ interface ScoreEntryModalProps {
   onClose: () => void;
 }
 
-// Helper function to get appropriate score label for each game
-function getScoreLabel(gameName: string): string {
-  switch (gameName) {
-    case 'Wordle':
-    case 'Hexcodle':
-    case 'Colorfle':
-    case 'Nerdle':
-    case 'Angle':
-    case 'Genshindle':
-      return 'Guesses';
-    case 'Quordle':
-    case 'Pokedoku':
-    case 'Connections':
-    case 'Gamedle':
-      return 'Solved';
-    case 'Worldle':
-      return 'Proximity';
-    case 'Timingle':
-      return 'Seconds';
-    case 'Wantedle':
-      return 'Time';
-    case 'Colorguesser':
-    case 'Spellcheck':
-    case 'Scrandle':
-    case 'r34dle':
-      return 'Score';
-    default:
-      return 'Score';
-  }
+// Dynamic score label based on game's scoreTypes - returns the first score type key capitalized
+function getScoreLabel(game: Game, puzzleKey?: string): string {
+  if (!game.scoreTypes) return 'Score';
+  
+  const puzzleKeys = Object.keys(game.scoreTypes);
+  if (puzzleKeys.length === 0) return 'Score';
+  
+  const targetPuzzle = puzzleKey || puzzleKeys[0];
+  const scoreTypeKeys = Object.keys(game.scoreTypes[targetPuzzle] || {});
+  if (scoreTypeKeys.length === 0) return 'Score';
+  
+  // Return the first score type key, capitalized
+  const scoreType = scoreTypeKeys[0];
+  return scoreType.charAt(0).toUpperCase() + scoreType.slice(1).replace(/_/g, ' ');
+}
+
+// Get max value for a score type from game's scoreTypes
+function getMaxFromScoreTypes(game: Game, puzzleKey: string, scoreTypeKey?: string): number | undefined {
+  if (!game.scoreTypes || !game.scoreTypes[puzzleKey]) return undefined;
+  
+  const scoreTypes = game.scoreTypes[puzzleKey];
+  const targetKey = scoreTypeKey || Object.keys(scoreTypes)[0];
+  const maxValue = scoreTypes[targetKey];
+  
+  // Return the max value if it's a positive number (not -1 which means unlimited)
+  return typeof maxValue === 'number' && maxValue > 0 ? maxValue : undefined;
 }
 
 function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps) {
@@ -59,30 +56,17 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     if (existingRecord?.metadata?.shareTexts) {
       return [...existingRecord.metadata.shareTexts];
     }
-    // New record - initialize with "main" or default subtasks
-    if (hasMultipleShareTexts && game.customData?.defaultShareTexts) {
-      return (game.customData.defaultShareTexts as string[]).map(name => ({
-        name,
+    // New record - initialize based on game's scoreTypes
+    if (game.scoreTypes && Object.keys(game.scoreTypes).length > 0) {
+      // Create a share-text-entry for each puzzle/subpuzzle in scoreTypes
+      return Object.keys(game.scoreTypes).map(puzzleName => ({
+        name: puzzleName,
         shareText: '',
         completed: false,
         failed: false,
       }));
     }
-    // Gamedle: initialize with 5 sub-puzzles
-    if (game.displayName === 'Gamedle') {
-      return ['Cover art', 'Artwork', 'Character', 'Keywords', 'Guess'].map(name => ({
-        name,
-        shareText: '',
-        completed: false,
-        failed: false,
-      }));
-    }
-    return [{
-      name: 'main',
-      shareText: '',
-      completed: false,
-      failed: false,
-    }];
+    return [];
   };
 
   const [shareTexts, setShareTexts] = useState<ShareTextEntry[]>(initializeShareTexts());
@@ -90,8 +74,16 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
   const [parseMessage, setParseMessage] = useState<string>('');
   const [hasValidationError, setHasValidationError] = useState(false);
   const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
-  const [useSummary, setUseSummary] = useState(false);
-  const [summaryText, setSummaryText] = useState('');
+  const [summaryText, setSummaryText] = useState(() => {
+    // Check if existing record has summary share text stored
+    if (existingRecord?.metadata?.shareTexts) {
+      const summaryEntry = existingRecord.metadata.shareTexts.find(entry => entry.name === 'SUMMARY');
+      if (summaryEntry?.shareText) {
+        return summaryEntry.shareText;
+      }
+    }
+    return '';
+  });
 
   // Auto-focus the first textarea when modal opens
   useEffect(() => {
@@ -129,72 +121,92 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     if (text.length > 20 && game.displayName === 'LoLdle' && text.includes('#LoLdle')) {
       const loldleParsed = parseLoLdleSummary(text);
       if (loldleParsed && loldleParsed.scores) {
-        // Store as a single consolidated entry with all mode scores
-        const newShareTexts = [{
-          name: 'All Modes',
-          shareText: '(parsed from summary)',
-          completed: true,
-          failed: false,
-          scores: loldleParsed.scores,
-          puzzleNumber: loldleParsed.puzzleNumber,
-        }];
+        // Create entries for each mode from scoreTypes with empty shareText (summary will be locked)
+        const modes = Object.keys(game.scoreTypes || {});
+        const newShareTexts = modes.map((modeName) => {
+          const score = loldleParsed.scores?.[modeName];
+          return {
+            name: modeName,
+            shareText: '',
+            completed: score !== undefined,
+            failed: false,
+            scores: score ? { [modeName]: score } : undefined,
+            puzzleNumber: loldleParsed.puzzleNumber,
+          };
+        });
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all LoLdle modes from summary');
+        setHasValidationError(false);
         setTimeout(() => setParseMessage(''), 3000);
+      } else if (text.trim().length > 0) {
+        // Summary parsing failed - show error
+        setParseMessage('❌ Could not parse LoLdle summary. Please check the format.');
+        setHasValidationError(true);
       }
+      return;
     }
     
     // Try to parse Pokedle summary when text is pasted
     if (text.length > 20 && game.displayName === 'Pokedle' && text.includes('#Pokedle')) {
       const pokedleParsed = parsePokedleSummary(text);
       if (pokedleParsed) {
-        const modeNames = ['Classic', 'Card', 'Description', 'Silhouette'];
-        const newShareTexts = modeNames.map((modeName) => {
-          const score = pokedleParsed.modes[modeName as keyof typeof pokedleParsed.modes];
+        // Create entries for each mode from scoreTypes with empty shareText (summary will be locked)
+        const modes = Object.keys(game.scoreTypes || {});
+        const newShareTexts = modes.map((modeName) => {
+          // Map lowercase scoreType keys to capitalized parser keys
+          const capitalizedMode = modeName.charAt(0).toUpperCase() + modeName.slice(1) as keyof typeof pokedleParsed.modes;
+          const score = pokedleParsed.modes[capitalizedMode];
           return {
             name: modeName,
-            shareText: score !== undefined ? '(parsed from summary)' : '',
+            shareText: '',
             completed: score !== undefined,
             failed: false,
-            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
+            scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
+            puzzleNumber: pokedleParsed.puzzleNumber,
           };
         });
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all Pokedle modes from summary');
+        setHasValidationError(false);
         setTimeout(() => setParseMessage(''), 3000);
+      } else if (text.trim().length > 0) {
+        // Summary parsing failed - show error
+        setParseMessage('❌ Could not parse Pokedle summary. Please check the format.');
+        setHasValidationError(true);
       }
+      return;
     }
     
     // Try to parse Gamedle summary when text is pasted
     if (text.length > 20 && game.displayName === 'Gamedle' && text.includes('Gamedle')) {
       const gamedleParsed = parseGamedleSummary(text);
       if (gamedleParsed) {
-        const modeNames = ['Cover art', 'Artwork', 'Character', 'Keywords', 'Guess'];
-        const maxAttemptsMap: { [key: string]: number } = {
-          'Cover art': 6,
-          'Artwork': 6,
-          'Character': 4,
-          'Keywords': 6,
-          'Guess': 10
-        };
-        const newShareTexts = modeNames.map((modeName) => {
+        // Create entries for each mode from scoreTypes with empty shareText (summary will be locked)
+        const modes = Object.keys(game.scoreTypes || {});
+        const newShareTexts = modes.map((modeName) => {
           const score = gamedleParsed.modes[modeName as keyof typeof gamedleParsed.modes];
           const puzzleNumber = gamedleParsed.puzzleNumbers[modeName as keyof typeof gamedleParsed.puzzleNumbers];
           const hasPuzzle = puzzleNumber !== undefined;
           return {
             name: modeName,
-            shareText: hasPuzzle ? `(parsed from summary #${puzzleNumber})` : '',
+            shareText: '',
             completed: score !== undefined,
             failed: hasPuzzle && score === undefined,
-            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
-            maxAttempts: maxAttemptsMap[modeName],
+            scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
+            maxAttempts: getMaxFromScoreTypes(game, modeName, 'attempts'),
           };
         });
         
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all Gamedle modes from summary');
+        setHasValidationError(false);
         setTimeout(() => setParseMessage(''), 3000);
+      } else if (text.trim().length > 0) {
+        // Summary parsing failed - show error
+        setParseMessage('❌ Could not parse Gamedle summary. Please check the format.');
+        setHasValidationError(true);
       }
+      return;
     }
   };
 
@@ -215,22 +227,29 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         if (game.displayName === 'LoLdle' && text.includes('#LoLdle')) {
           const loldleParsed = parseLoLdleSummary(text);
           if (loldleParsed && loldleParsed.scores) {
-            setUseSummary(true);
             setSummaryText(text);
-            setShareTexts([{
-              name: 'All Modes',
-              shareText: '(parsed from summary)',
-              completed: true,
-              failed: false,
-              // Store scores in additionalScores for display, but not as a property
-              additionalScores: Object.entries(loldleParsed.scores).map(([mode, scoreObj]) => ({
-                label: mode,
-                value: scoreObj.attempts ?? 0
-              })),
-              puzzleNumber: loldleParsed.puzzleNumber,
-            }]);
+            // Create entries for each mode from scoreTypes with empty shareText
+            const modes = Object.keys(game.scoreTypes || {});
+            const newShareTexts = modes.map((modeName) => {
+              const score = loldleParsed.scores?.[modeName];
+              return {
+                name: modeName,
+                shareText: '',
+                completed: score !== undefined,
+                failed: false,
+                scores: score ? { [modeName]: score } : undefined,
+                puzzleNumber: loldleParsed.puzzleNumber,
+              };
+            });
+            setShareTexts(newShareTexts);
             setParseMessage('✓ Auto-filled all LoLdle modes from summary');
+            setHasValidationError(false);
             setTimeout(() => setParseMessage(''), 3000);
+            return;
+          } else if (text.trim().length > 0) {
+            // Detected LoLdle summary format but parsing failed
+            setParseMessage('❌ Could not parse LoLdle summary. Please check the format.');
+            setHasValidationError(true);
             return;
           }
         }
@@ -239,20 +258,31 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         if (game.displayName === 'Pokedle' && text.includes('#Pokedle')) {
           const pokedleParsed = parsePokedleSummary(text);
           if (pokedleParsed) {
-            setUseSummary(true);
             setSummaryText(text);
-            setShareTexts([
-              ...Object.entries(pokedleParsed.modes).map(([mode, score]) => ({
-                name: mode,
-                shareText: '(parsed from summary)',
-                completed: true,
+            // Create entries for each mode from scoreTypes with empty shareText
+            const modes = Object.keys(game.scoreTypes || {});
+            const newShareTexts = modes.map((modeName) => {
+              // Map lowercase scoreType keys to capitalized parser keys
+              const capitalizedMode = modeName.charAt(0).toUpperCase() + modeName.slice(1) as keyof typeof pokedleParsed.modes;
+              const score = pokedleParsed.modes[capitalizedMode];
+              return {
+                name: modeName,
+                shareText: '',
+                completed: score !== undefined,
                 failed: false,
-                additionalScores: [{ label: 'attempts', value: score ?? 0 }],
+                scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
                 puzzleNumber: pokedleParsed.puzzleNumber,
-              }))
-            ]);
+              };
+            });
+            setShareTexts(newShareTexts);
             setParseMessage('✓ Auto-filled all Pokedle modes from summary');
+            setHasValidationError(false);
             setTimeout(() => setParseMessage(''), 3000);
+            return;
+          } else if (text.trim().length > 0) {
+            // Detected Pokedle summary format but parsing failed
+            setParseMessage('❌ Could not parse Pokedle summary. Please check the format.');
+            setHasValidationError(true);
             return;
           }
         }
@@ -261,20 +291,32 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         if (game.displayName === 'Gamedle' && text.includes('#Gamedle')) {
           const gamedleParsed = parseGamedleSummary(text);
           if (gamedleParsed) {
-            setUseSummary(true);
             setSummaryText(text);
-            setShareTexts([
-              ...Object.entries(gamedleParsed.modes).map(([mode, score]) => ({
-                name: mode,
-                shareText: '(parsed from summary)',
+            // Create entries for each mode from scoreTypes with empty shareText
+            const modes = Object.keys(game.scoreTypes || {});
+            const newShareTexts = modes.map((modeName) => {
+              const score = gamedleParsed.modes[modeName as keyof typeof gamedleParsed.modes];
+              const puzzleNumber = gamedleParsed.puzzleNumbers[modeName as keyof typeof gamedleParsed.puzzleNumbers];
+              const hasPuzzle = puzzleNumber !== undefined;
+              return {
+                name: modeName,
+                shareText: '',
                 completed: score !== undefined,
-                failed: score === undefined,
-                additionalScores: score !== undefined ? [{ label: 'attempts', value: score }] : [],
-                puzzleNumber: gamedleParsed.puzzleNumbers[mode as keyof typeof gamedleParsed.puzzleNumbers],
-              }))
-            ]);
+                failed: hasPuzzle && score === undefined,
+                scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
+                maxAttempts: getMaxFromScoreTypes(game, modeName, 'attempts'),
+                puzzleNumber,
+              };
+            });
+            setShareTexts(newShareTexts);
             setParseMessage('✓ Auto-filled all Gamedle puzzles from summary');
+            setHasValidationError(false);
             setTimeout(() => setParseMessage(''), 3000);
+            return;
+          } else if (text.trim().length > 0) {
+            // Detected Gamedle summary format but parsing failed
+            setParseMessage('❌ Could not parse Gamedle summary. Please check the format.');
+            setHasValidationError(true);
             return;
           }
         }
@@ -302,29 +344,28 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             // Transform to use the correct score type key from game.scoreTypes
             let parsedScores = fullParsed.scores;
             
-            // Transform score keys to match game.scoreTypes
+            // Transform score keys to match game.scoreTypes and validate completeness
             if (parsedScores && game.scoreTypes) {
               const transformedScores: Record<string, Record<string, number | undefined>> = {};
               for (const [puzzleKey, puzzleScores] of Object.entries(parsedScores)) {
                 const gameScoreTypes = game.scoreTypes[puzzleKey];
                 if (gameScoreTypes) {
-                  // For Worldle, map both 'accuracy' and 'attempts' if present
-                  if (game.displayName === 'Worldle' && puzzleKey === 'puzzle1') {
-                    transformedScores[puzzleKey] = {};
-                    if ('accuracy' in gameScoreTypes && typeof fullParsed.percentage === 'number') {
-                      transformedScores[puzzleKey]['accuracy'] = fullParsed.percentage;
+                  // Preserve all score types that exist in both parsed data and gameScoreTypes
+                  transformedScores[puzzleKey] = {};
+                  const expectedKeys = Object.keys(gameScoreTypes);
+                  const parsedKeys = Object.keys(puzzleScores);
+                  
+                  // Check for missing score types (only if game was completed successfully)
+                  if (!fullParsed.failed) {
+                    const missingKeys = expectedKeys.filter(key => !(key in puzzleScores) || puzzleScores[key] === undefined);
+                    if (missingKeys.length > 0) {
+                      throw new Error(`❌ Parser error: Missing score types [${missingKeys.join(', ')}] for ${game.displayName}. Expected: [${expectedKeys.join(', ')}], Got: [${parsedKeys.join(', ')}]`);
                     }
-                    if ('attempts' in gameScoreTypes && typeof fullParsed.guessCount === 'number') {
-                      transformedScores[puzzleKey]['attempts'] = fullParsed.guessCount;
-                    }
-                  } else {
-                    // Default: map the first score value to the first score type key
-                    const scoreTypeKey = Object.keys(gameScoreTypes)[0];
-                    if (scoreTypeKey) {
-                      const parsedValue = Object.values(puzzleScores)[0];
-                      transformedScores[puzzleKey] = { [scoreTypeKey]: parsedValue };
-                    } else {
-                      transformedScores[puzzleKey] = puzzleScores;
+                  }
+                  
+                  for (const scoreTypeKey of expectedKeys) {
+                    if (scoreTypeKey in puzzleScores) {
+                      transformedScores[puzzleKey][scoreTypeKey] = puzzleScores[scoreTypeKey];
                     }
                   }
                 } else {
@@ -335,11 +376,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             }
             
             (updated[index] as any).scores = parsedScores;
-            
-            // For Wantedle, store grade
-            if (game.displayName === 'Wantedle') {
-              updated[index].grade = fullParsed.grade;
-            }
+  
 
           }
           
@@ -388,8 +425,14 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     setIsSubmitting(true);
 
     // Check if any share text is empty or invalid
+    // If summaryText is present, we don't require individual share texts
     const hasEmptyOrInvalidShareText = shareTexts.some(st => {
-      // Empty share text
+      // If we have a summary, individual entries don't need anything
+      if (summaryText.trim()) {
+        // Summary mode: individual entries can be empty
+        return false;
+      }
+      // Empty share text (no summary)
       if (!st.shareText || st.shareText.trim().length === 0) return true;
       // Not completed (parsing failed)
       if (!st.completed) return true;
@@ -422,7 +465,43 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       // For single-puzzle games: use the first entry's scores
       // For multi-puzzle games: merge all entries' scores with unique keys
       let recordScores: Record<string, Record<string, number>> | undefined;
-      if (shareTexts.length === 1 && (shareTexts[0] as any).scores) {
+      
+      // If we have a summary, calculate scores from the parsed summary instead
+      if (summaryText.trim()) {
+        if (game.displayName === 'LoLdle') {
+          const loldleParsed = parseLoLdleSummary(summaryText);
+          if (loldleParsed && loldleParsed.scores) {
+            recordScores = loldleParsed.scores;
+          }
+        } else if (game.displayName === 'Pokedle') {
+          const pokedleParsed = parsePokedleSummary(summaryText);
+          if (pokedleParsed) {
+            recordScores = {};
+            for (const [mode, score] of Object.entries(pokedleParsed.modes)) {
+              if (score !== undefined) {
+                const modeKey = mode.toLowerCase();
+                recordScores[modeKey] = { attempts: score };
+              }
+            }
+            if (Object.keys(recordScores).length === 0) {
+              recordScores = undefined;
+            }
+          }
+        } else if (game.displayName === 'Gamedle') {
+          const gamedleParsed = parseGamedleSummary(summaryText);
+          if (gamedleParsed) {
+            recordScores = {};
+            for (const [mode, score] of Object.entries(gamedleParsed.modes)) {
+              if (score !== undefined) {
+                recordScores[mode] = { attempts: score };
+              }
+            }
+            if (Object.keys(recordScores).length === 0) {
+              recordScores = undefined;
+            }
+          }
+        }
+      } else if (shareTexts.length === 1 && (shareTexts[0] as any).scores) {
         // Filter out undefined values from scores
         const rawScores = (shareTexts[0] as any).scores;
         recordScores = {};
@@ -475,7 +554,16 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         failed: shareTexts.length > 1 ? (anyCompleted && anyFailed) : shareTexts[0].failed,
         scores: recordScores,
         metadata: {
-          shareTexts: shareTexts,
+          shareTexts: [
+            // Include SUMMARY entry if summaryText exists
+            ...(summaryText.trim() ? [{
+              name: 'SUMMARY',
+              shareText: summaryText,
+              completed: false,
+              failed: false,
+            }] : []),
+            ...shareTexts,
+          ],
           hasInvalidShareText: false,
         },
       };
@@ -514,217 +602,224 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           </button>
         </div>
 
-        <div style={{ position: 'relative' }}>
+        {/* Scrollable content wrapper */}
+        <div style={{ flex: 1, minHeight: 0, maxHeight: 'calc(90vh - 80px)', overflowY: 'auto', position: 'relative' }}>
           <form onSubmit={handleSubmit} className="score-entry-form">
           {(game.displayName === 'LoLdle' || game.displayName === 'Pokedle' || game.displayName === 'Gamedle') && (
-            <div className="form-section input-mode-toggle">
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={useSummary}
-                  onChange={(e) => setUseSummary(e.target.checked)}
+            <>
+              <div className="form-section">
+                <div className="section-header-row">
+                  <h3>{game.displayName} Summary {parseMessage && <span className="parse-message">{parseMessage}</span>}</h3>
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  value={summaryText}
+                  onChange={(e) => handleSummaryTextChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={(e) => {
+                    // Capture the target before setTimeout (React pools synthetic events)
+                    const target = e.currentTarget;
+                    setTimeout(() => {
+                      if (target) {
+                        handleSummaryTextChange(target.value);
+                      }
+                    }, 10);
+                  }}
+                  placeholder={`Paste ${game.displayName} summary here (e.g., 'I've completed all the modes of #${game.displayName} #... today:...')`}
+                  rows={8}
+                  className="share-text-area summary-text-area"
                 />
-                <span>Use Summary Share Text</span>
-              </label>
-            </div>
+              </div>
+
+            </>
           )}
 
-          {(game.displayName === 'LoLdle' || game.displayName === 'Pokedle' || game.displayName === 'Gamedle') && useSummary ? (
-            <div className="form-section">
-              <div className="section-header-row">
-                <h3>{game.displayName} Summary {parseMessage && <span className="parse-message">{parseMessage}</span>}</h3>
-              </div>
-              <textarea
-                ref={textareaRef}
-                value={summaryText}
-                onChange={(e) => handleSummaryTextChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={(e) => {
-                  setTimeout(() => {
-                    handleSummaryTextChange(e.currentTarget.value);
-                  }, 10);
-                }}
-                placeholder={`Paste ${game.displayName} summary here (e.g., 'I've completed all the modes of #${game.displayName} #... today:...')`}
-                rows={8}
-                className="share-text-area summary-text-area"
-              />
-              <div className="summary-results">
-                <h4>Parsed Results:</h4>
-                {shareTexts.map((entry, index) => {
-                  // Extract display score from scores object
-                  const entryScores = (entry as any).scores?.puzzle1;
-                  const displayScore = entryScores?.attempts ?? entryScores?.solved ?? entryScores?.time ?? entryScores?.percentage;
-                  return (
-                    <div key={index} className="summary-result-item">
-                      <span className="result-name">{entry.name}:</span>
-                      <span className="result-score">
-                        {entry.failed ? 'X' : (entry.completed ? (displayScore !== undefined ? `${displayScore}` : '✓') : '-')}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="form-section">
+            <div className="section-header-row">
+              <h3>Share Texts {parseMessage && <span className="parse-message">{parseMessage}</span>}</h3>
+              {!hasMultipleShareTexts && game.category === 'custom' && (
+                <button
+                  type="button"
+                  className="btn-small"
+                  onClick={addShareText}
+                >
+                  + Add Subtask
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="form-section">
-              <div className="section-header-row">
-                <h3>Share Texts {parseMessage && <span className="parse-message">{parseMessage}</span>}</h3>
-                {!hasMultipleShareTexts && game.category === 'custom' && (
-                  <button
-                    type="button"
-                    className="btn-small"
-                    onClick={addShareText}
-                  >
-                    + Add Subtask
-                  </button>
-                )}
-              </div>
 
-            {shareTexts.map((entry, index) => (
-              <div key={index} className="share-text-entry">
-                <div className="entry-header">
-                  {game.category === 'custom' && editingNameIndex === index ? (
-                    <input
-                      type="text"
-                      className="name-input"
-                      value={entry.name}
-                      onChange={(e) => updateShareTextEntry(index, { name: e.target.value })}
-                      onBlur={() => setEditingNameIndex(null)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          setEditingNameIndex(null);
-                        }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <h4 
-                      className="entry-name"
-                      onClick={() => game.category === 'custom' && setEditingNameIndex(index)}
-                      title={game.category === 'custom' ? 'Click to rename' : ''}
-                      style={{ cursor: game.category === 'custom' ? 'pointer' : 'default' }}
-                    >
-                      {entry.name}
-                    </h4>
-                  )}
-                  {shareTexts.length > 1 && game.category === 'custom' && (
-                    <button
-                      type="button"
-                      className="btn-remove"
-                      onClick={() => removeShareText(index)}
-                      title="Remove this subtask"
-                    >
-                      ×
-                    </button>
-                  )}
+              {summaryText.trim() && (
+                <div style={{
+                  backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid #ffc107',
+                  borderRadius: '4px',
+                  padding: '0.75rem',
+                  marginBottom: '1rem',
+                  color: '#ffc107',
+                  fontSize: '0.875rem'
+                }}>
+                  ⚠️ Summary detected - individual entries below are locked.
                 </div>
+              )}
 
-                <div className="entry-content">
-                  <div className="checkbox-row">
-                    <label className="checkbox-label">
+              {shareTexts.map((entry, index) => ({ entry, originalIndex: index }))
+                .filter(({ entry }) => entry.name !== 'SUMMARY')
+                .map(({ entry, originalIndex }) => (
+                <div 
+                  key={originalIndex} 
+                  className="share-text-entry"
+                  style={summaryText.trim() ? {
+                    opacity: 0.6,
+                    pointerEvents: 'none',
+                  } : {}}
+                >
+                  <div className="entry-header">
+                    {game.category === 'custom' && editingNameIndex === originalIndex && !summaryText.trim() ? (
                       <input
-                        type="checkbox"
-                        checked={entry.completed}
-                        disabled={true}
-                        tabIndex={-1}
-                        style={{ pointerEvents: 'none' }}
+                        type="text"
+                        className="name-input"
+                        value={entry.name}
+                        onChange={(e) => updateShareTextEntry(originalIndex, { name: e.target.value })}
+                        onBlur={() => setEditingNameIndex(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setEditingNameIndex(null);
+                          }
+                        }}
+                        autoFocus
                       />
-                      <span>Completed</span>
-                    </label>
+                    ) : (
+                      <h4 
+                        className="entry-name"
+                        onClick={() => !summaryText.trim() && game.category === 'custom' && setEditingNameIndex(originalIndex)}
+                        title={!summaryText.trim() && game.category === 'custom' ? 'Click to rename' : ''}
+                        style={{ cursor: !summaryText.trim() && game.category === 'custom' ? 'pointer' : 'default' }}
+                      >
+                        {entry.name}
+                      </h4>
+                    )}
+                    {shareTexts.filter(e => e.name !== 'SUMMARY').length > 1 && game.category === 'custom' && !summaryText.trim() && (
+                      <button
+                        type="button"
+                        className="btn-remove"
+                        onClick={() => removeShareText(originalIndex)}
+                        title="Remove this subtask"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
 
-                    {entry.completed && game.isFailable && (
+                  <div className="entry-content">
+                    <div className="checkbox-row">
                       <label className="checkbox-label">
                         <input
                           type="checkbox"
-                          checked={entry.failed}
+                          checked={entry.completed}
                           disabled={true}
-                          title="Automatically detected from share text"
+                          tabIndex={-1}
+                          style={{ pointerEvents: 'none' }}
                         />
-                        <span>Failed</span>
+                        <span>Completed</span>
                       </label>
-                    )}
 
-                    {/* Always show score field, even if empty */}
-                    <div style={{ display: 'flex', gap: '0.5em', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <label style={{ fontSize: '0.8em', color: '#aaa' }}>{getScoreLabel(game.displayName)}</label>
-                        {(() => {
-                          // Extract primary score from scores object for display
-                          const entryScores = (entry as any).scores?.puzzle1;
-                          const primaryScore = entryScores?.attempts ?? entryScores?.solved ?? entryScores?.time ?? entryScores?.percentage ?? entryScores?.correct;
-                          const maxAttempts = entry.maxAttempts || entry.shareText?.match(/\/(\d+)/)?.[1];
-                          
-                          let displayValue = '';
-                          if (game.displayName === 'Wantedle') {
-                            const timeMs = entryScores?.time;
-                            displayValue = typeof timeMs === 'number' && !entry.failed
-                              ? `${(timeMs / 1000).toFixed(1)}s`
-                              : entry.failed ? 'X' : '';
-                          } else if (typeof primaryScore === 'number') {
-                            displayValue = entry.failed
-                              ? 'X'
-                              : `${primaryScore}${maxAttempts ? `/${maxAttempts}` : ''}`;
-                          }
-                          
-                          return (
-                            <input
-                              type="text"
-                              className="score-input-small"
-                              value={displayValue}
-                              placeholder={getScoreLabel(game.displayName)}
-                              readOnly
-                              style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
-                            />
-                          );
-                        })()}
+                      {entry.completed && game.isFailable && (
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={entry.failed}
+                            disabled={true}
+                            title="Automatically detected from share text"
+                          />
+                          <span>Failed</span>
+                        </label>
+                      )}
+
+                      {/* Always show score field, even if empty */}
+                      <div style={{ display: 'flex', gap: '0.5em', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.8em', color: '#aaa' }}>{getScoreLabel(game, entry.name)}</label>
+                          {(() => {
+                            // Extract primary score from scores object for display
+                            const entryScores = (entry as any).scores?.[entry.name] || (entry as any).scores?.puzzle1;
+                            const scoreTypeKeys = Object.keys(entryScores || {});
+                            const primaryScoreKey = scoreTypeKeys[0];
+                            const primaryScore = entryScores?.[primaryScoreKey];
+                            const maxAttempts = entry.maxAttempts || getMaxFromScoreTypes(game, entry.name, primaryScoreKey);
+                            
+                            let displayValue = '';
+                            // Handle time_ms specially (convert to seconds)
+                            if (primaryScoreKey === 'time_ms' && typeof primaryScore === 'number') {
+                              displayValue = !entry.failed
+                                ? `${(primaryScore / 1000).toFixed(1)}s`
+                                : 'X';
+                            } else if (typeof primaryScore === 'number') {
+                              displayValue = entry.failed
+                                ? 'X'
+                                : `${primaryScore}${maxAttempts ? `/${maxAttempts}` : ''}`;
+                            }
+                            
+                            return (
+                              <input
+                                type="text"
+                                className="score-input-small"
+                                value={displayValue}
+                                placeholder={getScoreLabel(game, entry.name)}
+                                readOnly
+                                style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
+                              />
+                            );
+                          })()}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <textarea
-                      ref={index === 0 ? textareaRef : undefined}
-                      value={entry.shareText}
-                      onChange={(e) => handleShareTextChange(index, e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onPaste={(e) => {
-                        const target = e.currentTarget;
-                        setTimeout(() => {
-                          if (target) {
-                            handleShareTextChange(index, target.value);
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <textarea
+                        ref={originalIndex === 0 && !summaryText ? textareaRef : undefined}
+                        value={entry.shareText}
+                        onChange={(e) => !summaryText.trim() && handleShareTextChange(originalIndex, e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onPaste={(e) => {
+                          if (!summaryText.trim()) {
+                            const target = e.currentTarget;
+                            setTimeout(() => {
+                              if (target) {
+                                handleShareTextChange(originalIndex, target.value);
+                              }
+                            }, 10);
                           }
-                        }, 10);
-                      }}
-                      placeholder="Paste share text here... Score will be auto-detected!"
-                      rows={4}
-                      className="share-text-area"
-                    />
-                    {/* TooltipWithArrow rendered via portal for robust visibility */}
-                    {index === 0 && tooltipPos && createPortal(
-                      <TooltipWithArrow
-                        onHide={() => {}}
-                        message="paste share text here"
-                        arrow="right"
-                        position="left"
-                        style={{
-                          position: 'absolute',
-                          left: tooltipPos.left,
-                          top: tooltipPos.top,
-                          transform: 'translateY(-50%)',
-                          pointerEvents: 'none',
-                          zIndex: 3000,
-                          background: '#222',
-                          minWidth: 220,
                         }}
-                      />,
-                      document.body
-                    )}
+                        placeholder="Paste share text here... Score will be auto-detected!"
+                        rows={4}
+                        className="share-text-area"
+                        disabled={summaryText.trim() ? true : false}
+                      />
+                      {/* TooltipWithArrow rendered via portal for robust visibility */}
+                      {originalIndex === 0 && tooltipPos && createPortal(
+                        <TooltipWithArrow
+                          onHide={() => {}}
+                          message="paste share text here"
+                          arrow="right"
+                          position="left"
+                          style={{
+                            position: 'absolute',
+                            left: tooltipPos.left,
+                            top: tooltipPos.top,
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none',
+                            zIndex: 3000,
+                            background: '#222',
+                            minWidth: 220,
+                          }}
+                        />,
+                        document.body
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
             </div>
-          )}
 
           <div className="modal-actions">
             <button

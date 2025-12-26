@@ -227,36 +227,8 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
               )}
             </div>
             
-            {/* Display share texts */}
-            {record.metadata?.shareTexts && record.metadata.shareTexts.length > 1 ? (
-              /* Multiple share texts - show only names and scores */
-              <div className="share-texts-container">
-                {record.metadata.shareTexts.map((entry, i) => {
-                  // ShareTextEntry does not have scores, fallback to N/A
-                  let scoreDisplay = 'N/A';
-                  if (entry.completed) {
-                    scoreDisplay = '✓';
-                  } else if (game.displayName === 'Gamedle' && entry.failed && entry.maxAttempts) {
-                    scoreDisplay = `X/${entry.maxAttempts}`;
-                  }
-                  // For Gamedle, both completed and failed (with shareText) are considered complete
-                  const hasShareText = entry.shareText && entry.shareText.length > 0;
-                  const isGamedleComplete = game.displayName === 'Gamedle' && hasShareText;
-                  const displayAsComplete = entry.completed || entry.failed || isGamedleComplete;
-                  return (
-                    <div key={i} className={`share-text-entry-preview ${displayAsComplete ? (entry.failed ? 'failed' : 'success') : 'pending'}`}>
-                      <div className="entry-preview-name">{entry.name}</div>
-                      <div className="entry-preview-status">
-                        {displayAsComplete ? (
-                          entry.failed ? (scoreDisplay || 'X') : 
-                          scoreDisplay || '✓'
-                        ) : '⏳'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : record.metadata?.shareTexts && record.metadata.shareTexts.length === 1 && (
+            {/* Display share texts grid if present */}
+            {record.metadata?.shareTexts && record.metadata.shareTexts.length === 1 && (
               /* Single share text - show emoji grid if present, else fallback to shareText */
               (() => {
                 const entry = record.metadata.shareTexts[0];
