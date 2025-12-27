@@ -29,6 +29,7 @@ export interface ShareTextEntry {
   completed: boolean;
   failed: boolean;
   // score?: number; // Legacy field removed, use scores in GameRecord
+  scores?: Record<string, Record<string, number | string | undefined>>; // Optional parsed scores for this share text entry
   additionalScores?: { label: string; value: number; maxValue?: number }[]; // For games with multiple score metrics (e.g., Pokedoku uniqueness)
   // Parsed data from shareTextParser (stored once, read many times)
   maxAttempts?: number; // Total attempts allowed (e.g., 6 for Wordle)
