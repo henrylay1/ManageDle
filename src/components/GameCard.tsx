@@ -171,14 +171,17 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
                           {puzzleKeys.map((puzzleKey) => {
                             const scoreValue = record.scores![puzzleKey];
                             const attempts = scoreValue?.attempts;
-                            const isCompleted = attempts !== undefined && attempts !== -1;
+                            const isFailed = attempts === -1;
+                            const isCompleted = attempts !== undefined && !isFailed;
+                            const statusClass = isFailed ? 'failed' : isCompleted ? 'success' : 'pending';
+                            const attemptsDisplay = isFailed ? 'X' : (attempts !== undefined ? String(attempts) : '-');
                             return (
                               <div 
                                 key={puzzleKey} 
-                                className={`share-text-entry-preview ${isCompleted ? 'success' : 'pending'}`}
+                                className={`share-text-entry-preview ${statusClass}`}
                               >
                                 <div className="entry-preview-name">{puzzleKey.charAt(0).toUpperCase() + puzzleKey.slice(1)}</div>
-                                <div className="entry-preview-status">{attempts}</div>
+                                <div className="entry-preview-status">{attemptsDisplay}</div>
                               </div>
                             );
                           })}
@@ -240,9 +243,11 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
                         #{entry.puzzleNumber}
                       </div>
                     )}
-                    {gridLines.length > 0 && gridLines.map((line, i) => (
-                      <div key={i} className="share-text-line">{line}</div>
-                    ))}
+                    {gridLines.length > 0 && gridLines.map((line, i) => {
+                      // Convert any 'X' markers to a red square emoji for failed cells
+                      const converted = line.replace(/X/g, '🟥');
+                      return <div key={i} className="share-text-line">{converted}</div>;
+                    })}
                   </div>
                 );
               })()

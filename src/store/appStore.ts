@@ -104,7 +104,8 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
         if (!record.metadata) return null;
         const cleaned = { ...record.metadata };
         if (Array.isArray(cleaned.shareTexts)) {
-          cleaned.shareTexts = cleaned.shareTexts.map(({ shareText, ...rest }) => rest);
+          // Remove any parsed `shareText` blobs, `scores`, and `maxAttempts` carried in metadata entries
+          cleaned.shareTexts = cleaned.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }) => rest);
         }
         return Object.keys(cleaned).length > 0 ? cleaned : null;
       })(),

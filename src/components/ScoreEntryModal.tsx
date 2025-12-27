@@ -344,35 +344,29 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             // Transform to use the correct score type key from game.scoreTypes
             let parsedScores = fullParsed.scores;
             
-            // Transform score keys to match game.scoreTypes and validate completeness
-            if (parsedScores && game.scoreTypes) {
-              const transformedScores: Record<string, Record<string, number | undefined>> = {};
-              for (const [puzzleKey, puzzleScores] of Object.entries(parsedScores)) {
-                const gameScoreTypes = game.scoreTypes[puzzleKey];
-                if (gameScoreTypes) {
-                  // Preserve all score types that exist in both parsed data and gameScoreTypes
-                  transformedScores[puzzleKey] = {};
-                  const expectedKeys = Object.keys(gameScoreTypes);
-                  const parsedKeys = Object.keys(puzzleScores);
-                  
-                  // Check for missing score types (only if game was completed successfully)
-                  if (!fullParsed.failed) {
-                    const missingKeys = expectedKeys.filter(key => !(key in puzzleScores) || puzzleScores[key] === undefined);
-                    if (missingKeys.length > 0) {
-                      throw new Error(`❌ Parser error: Missing score types [${missingKeys.join(', ')}] for ${game.displayName}. Expected: [${expectedKeys.join(', ')}], Got: [${parsedKeys.join(', ')}]`);
-                    }
+// Validate parsed scores match game.scoreTypes exactly
+          if (parsedScores && game.scoreTypes) {
+            for (const [puzzleKey, puzzleScores] of Object.entries(parsedScores)) {
+              const gameScoreTypes = game.scoreTypes[puzzleKey];
+              if (gameScoreTypes) {
+                const expectedKeys = Object.keys(gameScoreTypes);
+                const parsedKeys = Object.keys(puzzleScores);
+                
+                // Check for missing expected score types (only if game was completed successfully)
+                if (!fullParsed.failed) {
+                  const missingKeys = expectedKeys.filter(key => !(key in puzzleScores) || puzzleScores[key] === undefined);
+                  if (missingKeys.length > 0) {
+                    throw new Error(`❌ Parser error: Missing score types [${missingKeys.join(', ')}] for ${game.displayName}. Expected: [${expectedKeys.join(', ')}], Got: [${parsedKeys.join(', ')}]`);
                   }
-                  
-                  for (const scoreTypeKey of expectedKeys) {
-                    if (scoreTypeKey in puzzleScores) {
-                      transformedScores[puzzleKey][scoreTypeKey] = puzzleScores[scoreTypeKey];
-                    }
-                  }
-                } else {
-                  transformedScores[puzzleKey] = puzzleScores;
+                }
+                
+                // Check for extra parsed keys not in scoreTypes
+                const extraKeys = parsedKeys.filter(key => !expectedKeys.includes(key));
+                if (extraKeys.length > 0) {
+                  throw new Error(`❌ Parser/scoreTypes mismatch for ${game.displayName}: Parser returned unexpected score keys [${extraKeys.join(', ')}]. Expected keys: [${expectedKeys.join(', ')}]. Please update game.scoreTypes in database to match parser output.`);
                 }
               }
-              parsedScores = transformedScores;
+            }
             }
             
             (updated[index] as any).scores = parsedScores;
@@ -513,6 +507,18 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             }
           }
         }
+        // Remove any puzzle entries that ended up empty
+        if (recordScores) {
+          const nonEmptyKeys = Object.keys(recordScores).filter(pk => Object.keys(recordScores![pk]).length > 0);
+          if (nonEmptyKeys.length === 0) {
+            recordScores = undefined;
+          } else {
+            // prune empty keys
+            for (const pk of Object.keys(recordScores)) {
+              if (Object.keys(recordScores[pk]).length === 0) delete recordScores[pk];
+            }
+          }
+        }
       } else if (shareTexts.length > 1) {
         recordScores = {};
         shareTexts.forEach((st, idx) => {
@@ -522,27 +528,33 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             const puzzleKey = `puzzle${idx + 1}`;
             // If stScores has puzzle1, rename it to the correct puzzle key
             if (stScores.puzzle1) {
-              // Filter out undefined values
-              recordScores![puzzleKey] = {};
+              // Filter out undefined values and only add if non-empty
+              const tmp: Record<string, number> = {};
               for (const [scoreKey, scoreVal] of Object.entries(stScores.puzzle1 as Record<string, number | undefined>)) {
                 if (scoreVal !== undefined) {
-                  recordScores![puzzleKey][scoreKey] = scoreVal;
+                  tmp[scoreKey] = scoreVal as number;
                 }
               }
+              if (Object.keys(tmp).length > 0) {
+                recordScores![puzzleKey] = tmp;
+              }
             } else {
-              // Otherwise just merge all keys, filtering undefined
+              // Otherwise just merge all keys, filtering undefined and only adding non-empty
               for (const [pk, pv] of Object.entries(stScores)) {
-                recordScores![pk] = {};
+                const tmp2: Record<string, number> = {};
                 for (const [sk, sv] of Object.entries(pv as Record<string, number | undefined>)) {
                   if (sv !== undefined) {
-                    recordScores![pk][sk] = sv;
+                    tmp2[sk] = sv as number;
                   }
+                }
+                if (Object.keys(tmp2).length > 0) {
+                  recordScores![pk] = tmp2;
                 }
               }
             }
           }
         });
-        if (Object.keys(recordScores).length === 0) {
+        if (!recordScores || Object.keys(recordScores).length === 0) {
           recordScores = undefined;
         }
       }
@@ -567,6 +579,29 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           hasInvalidShareText: false,
         },
       };
+
+      // Runtime guard: ensure we never upload an empty scores object
+      try {
+        if (recordData.scores && Object.keys(recordData.scores).length === 0) {
+          console.warn('[ScoreEntryModal] Detected empty recordData.scores, pruning before save', recordData.scores, shareTexts);
+          recordData.scores = undefined;
+        } else if (recordData.scores) {
+          // prune any nested empty score objects
+          for (const pk of Object.keys(recordData.scores)) {
+            const v = recordData.scores[pk];
+            if (!v || Object.keys(v).length === 0) {
+              delete recordData.scores![pk];
+            }
+          }
+          if (recordData.scores && Object.keys(recordData.scores).length === 0) {
+            console.warn('[ScoreEntryModal] All nested score keys were empty, clearing scores before save');
+            recordData.scores = undefined;
+          }
+        }
+      } catch (e) {
+        // Non-fatal - proceed with save but log
+        console.error('[ScoreEntryModal] Error normalizing scores before save', e);
+      }
 
       if (existingRecord) {
         await updateRecord(existingRecord.recordId, recordData);
@@ -748,8 +783,8 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                             const maxAttempts = entry.maxAttempts || getMaxFromScoreTypes(game, entry.name, primaryScoreKey);
                             
                             let displayValue = '';
-                            // Handle time_ms specially (convert to seconds)
-                            if (primaryScoreKey === 'time_ms' && typeof primaryScore === 'number') {
+                            // Handle time specially (convert to seconds)
+                            if (primaryScoreKey === 'time' && typeof primaryScore === 'number') {
                               displayValue = !entry.failed
                                 ? `${(primaryScore / 1000).toFixed(1)}s`
                                 : 'X';

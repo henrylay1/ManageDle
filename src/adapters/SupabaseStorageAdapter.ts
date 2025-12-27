@@ -172,8 +172,8 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           if (Object.keys(shareTextJson).length === 0) {
             shareTextJson = null;
           }
-          // Remove shareText from each entry in metadata
-          cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, ...rest }) => rest);
+          // Remove shareText, internal `scores`, and maxAttempts from each entry in metadata
+          cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }) => rest);
         }
         // Build dbRecord, omitting share_text if shareTextJson is null
         const dbRecord: any = {

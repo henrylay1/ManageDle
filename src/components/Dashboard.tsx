@@ -120,7 +120,9 @@ function Dashboard() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['academic']);
   const [onboardingActive, setOnboardingActive] = useState(false);
+  const [shimmeringGameId, setShimmeringGameId] = useState<string | null>(null);
   const wordleAddBtnRef = useRef<HTMLButtonElement | null>(null);
+  const gameCardRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Shared auth form state
   const [authEmail, setAuthEmail] = useState('');
@@ -171,6 +173,25 @@ function Dashboard() {
   const handleRemoveFromActive = async () => {
     if (selectedGame) {
       await useAppStore.getState().toggleGameActive(selectedGame.gameId);
+    }
+  };
+
+  const handleShimmerGameCard = (game: Game) => {
+    // Scroll to and shimmer the game card (without removing)
+    const cardRef = gameCardRefsMap.current.get(game.gameId);
+    if (cardRef) {
+      cardRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Apply shimmer effect
+      setShimmeringGameId(game.gameId);
+      setTimeout(() => setShimmeringGameId(null), 1500);
+    }
+  };
+
+  const handleRemoveAllFromActive = async () => {
+    // Toggle all active games to inactive
+    for (const game of activeGames) {
+      await useAppStore.getState().toggleGameActive(game.gameId);
     }
   };
 
@@ -238,6 +259,16 @@ function Dashboard() {
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {/* Ticket Modal */}
               <TicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
+            {/* Remove All from Active Button */}
+            {activeGames.length > 0 && (
+              <button
+                className="btn-secondary"
+                onClick={handleRemoveAllFromActive}
+                title="Remove all games from active"
+              >
+                Clear All
+              </button>
+            )}
             {/* Leaderboard Button */}
             {authService.isConfigured() && (
               <button
@@ -307,19 +338,28 @@ function Dashboard() {
                 return aCompleted ? -1 : 1;
               })
               .map(game => (
-                <GameCard
+                <div
                   key={game.gameId}
-                  game={game}
-                  record={getTodayRecord(game.gameId)}
-                  onPlay={() => handlePlayGame(game)}
-                  onLogScore={() => handleLogScore(game)}
-                  onViewStats={() => handleViewStats(game)}
-                  onRemove={() => handleRemoveGame(game)}
-                  onReset={async () => {
-                    // Refresh today's records when a reset occurs
+                  ref={(el) => {
+                    if (el) {
+                      gameCardRefsMap.current.set(game.gameId, el);
+                    }
+                  }}
+                  className={shimmeringGameId === game.gameId ? 'shimmer-effect' : ''}
+                >
+                  <GameCard
+                    game={game}
+                    record={getTodayRecord(game.gameId)}
+                    onPlay={() => handlePlayGame(game)}
+                    onLogScore={() => handleLogScore(game)}
+                    onViewStats={() => handleViewStats(game)}
+                    onRemove={() => handleRemoveGame(game)}
+                    onReset={async () => {
+                      // Refresh today's records when a reset occurs
                     await useAppStore.getState().loadTodayRecords();
                   }}
-                />
+                  />
+                </div>
               ))}
           </div>
         )}
@@ -346,9 +386,17 @@ function Dashboard() {
                 <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
                   <span className="game-icon">{game.icon}</span>
                   <span className="game-name">{game.displayName}</span>
-                  <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
-                    {game.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  {game.isActive ? (
+                    <button 
+                      className="game-status active"
+                      onClick={() => handleShimmerGameCard(game)}
+                      title="Click to highlight in dashboard"
+                    >
+                      Active
+                    </button>
+                  ) : (
+                    <span className="game-status inactive">Inactive</span>
+                  )}
                   <button
                     className="btn-small"
                     onClick={() => {
@@ -385,9 +433,17 @@ function Dashboard() {
                   <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
                     <span className="game-icon">{game.icon}</span>
                     <span className="game-name">{game.displayName}</span>
-                    <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
-                      {game.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    {game.isActive ? (
+                      <button 
+                        className="game-status active"
+                        onClick={() => handleShimmerGameCard(game)}
+                        title="Click to highlight in dashboard"
+                      >
+                        Active
+                      </button>
+                    ) : (
+                      <span className="game-status inactive">Inactive</span>
+                    )}
                     <button
                       className="btn-small"
                       ref={ onboardingActive ? wordleAddBtnRef : undefined}
@@ -422,9 +478,17 @@ function Dashboard() {
                 <div key={game.gameId} className="game-list-item">
                   <span className="game-icon">{game.icon}</span>
                   <span className="game-name">{game.displayName}</span>
-                  <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
-                    {game.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  {game.isActive ? (
+                    <button 
+                      className="game-status active"
+                      onClick={() => handleShimmerGameCard(game)}
+                      title="Click to highlight in dashboard"
+                    >
+                      Active
+                    </button>
+                  ) : (
+                    <span className="game-status inactive">Inactive</span>
+                  )}
                   <button
                     className="btn-small"
                     onClick={() => useAppStore.getState().toggleGameActive(game.gameId)}
@@ -454,9 +518,17 @@ function Dashboard() {
                 <div key={game.gameId} className="game-list-item">
                   <span className="game-icon">{game.icon}</span>
                   <span className="game-name">{game.displayName}</span>
-                  <span className={`game-status ${game.isActive ? 'active' : 'inactive'}`}>
-                    {game.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  {game.isActive ? (
+                    <button 
+                      className="game-status active"
+                      onClick={() => handleShimmerGameCard(game)}
+                      title="Click to highlight in dashboard"
+                    >
+                      Active
+                    </button>
+                  ) : (
+                    <span className="game-status inactive">Inactive</span>
+                  )}
                   <button
                     className="btn-small"
                     onClick={() => useAppStore.getState().toggleGameActive(game.gameId)}

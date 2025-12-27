@@ -16,7 +16,7 @@ function getCurrentDate(): string {
 export interface ParsedShareText {
   /** @deprecated Use scores field instead. This field will be removed in a future version. */
   score?: number;
-  scores?: Record<string, Record<string, number | undefined>>; // Structured scores e.g., { puzzle1: { attempts: 4 } }
+  scores?: Record<string, Record<string, number | string | undefined>>; // Structured scores e.g., { puzzle1: { attempts: 4, grade: 'A' } }
   failed: boolean; // Whether they failed (X/6)
   maxAttempts?: number; // Total attempts allowed (e.g., 6)
   completed: boolean; // Whether the game was completed
@@ -29,6 +29,56 @@ export interface ParsedShareText {
   percentage?: number; // For Worldle: the proximity percentage (e.g., 80 from (80%))
   guessCount?: number; // For Worldle: the number of guesses used (separate from score which will be percentage)
   grade?: string; // For Wantedle: letter grade (A-F)
+  // Warnings produced during parsing (e.g., non-numeric score fields)
+  parseWarnings?: string[];
+}
+
+/**
+ * Normalize parsed result to ensure legacy `score` is removed (scores should be primary)
+ * and empty `scores` objects are normalized to `undefined`.
+ */
+function normalizeParsedShareText(res: ParsedShareText | null): ParsedShareText | null {
+  if (!res) return null;
+
+  try {
+    // Always remove the deprecated `score` field in favor of structured `scores`
+    if (res.score !== undefined) {
+      delete (res as any).score;
+    }
+
+    // Normalize empty scores => undefined
+    if (res.scores && Object.keys(res.scores).length === 0) {
+      res.scores = undefined;
+    }
+
+    // Also prune nested empty score objects
+    if (res.scores) {
+      for (const k of Object.keys(res.scores)) {
+        const v = res.scores[k];
+        if (!v || Object.keys(v).length === 0) delete res.scores![k];
+        else {
+          // allow certain fields (like 'grade') to be string values
+          const allowedStringFields = new Set(['grade']);
+          for (const field of Object.keys(v)) {
+            const val = (v as any)[field];
+            if (typeof val === 'string' && !allowedStringFields.has(field)) {
+              // collect warnings for unexpected string values
+              res.parseWarnings = res.parseWarnings || [];
+              res.parseWarnings.push(`Parsed non-numeric score value for '${field}' in '${k}': "${val}"`);
+            }
+          }
+        }
+      }
+      if (Object.keys(res.scores).length === 0) res.scores = undefined;
+      if (res.parseWarnings && res.parseWarnings.length > 0) {
+        res.parseWarnings = Array.from(new Set(res.parseWarnings));
+      }
+    }
+  } catch (e) {
+    // Don't let normalization throw
+  }
+
+  return res;
 }
 
 export interface LoLdleParsedResult {
@@ -133,9 +183,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       throw new Error('❌ Incorrect share text for Chronophoto. Expected format: "I got a score of N on today\'s Chronophoto"');
     }
     result.gameName = 'Chronophoto';
-    result.score = parseInt(scoreMatch[1], 10);
     result.completed = true;
-    result.failed = result.score === 0;
 
     // Extract rounds and calculate total score
     const roundScores: number[] = [];
@@ -148,6 +196,8 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Store total score in points field
     const totalScore = roundScores.reduce((sum, score) => sum + score, 0);
     result.scores = { puzzle1: { points: totalScore } };
+    // Mark failed based on totalScore
+    result.failed = totalScore === 0;
 
     // Puzzle number: extract date if present
     const dateMatch = text.match(/Chronophoto: (\d{1,2}\/\d{1,2}\/\d{4})/);
@@ -189,14 +239,13 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.puzzleNumber = puzzleNumber;
     // Store time in milliseconds as main score (e.g., 19.2s -> 19200ms)
     const timeMs = Math.round(parseFloat(timeStr) * 1000);
-    result.score = timeMs;
     result.completed = true;
     // Fail if grade is C, D, E, F
     result.failed = /[C-F]/i.test(grade);
     // Store grade as separate property
     result.grade = grade;
-    // Store all scores in scores field
-    result.scores = { puzzle1: { time_ms: timeMs } };
+    // Store all scores in scores field (include grade and time)
+    result.scores = { puzzle1: { time: timeMs, grade } };
     
     // Extract emoji (single emoji line)
     const emojiLines = lines.filter(line => {
@@ -225,11 +274,9 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (scoreStr.toUpperCase() === 'X') {
       result.failed = true;
       result.completed = true;
-      result.score = undefined;
       result.scores = { puzzle1: { attempts: -1 } };
     } else {
       const attempts = parseInt(scoreStr, 10);
-      result.score = attempts;
       result.completed = true;
       result.failed = false;
       result.scores = { puzzle1: { attempts } };
@@ -271,7 +318,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (isSuccess) {
       // Count the number of rows to determine score
       const attempts = gridLines.length;
-      result.score = attempts;
       result.failed = false;
       result.completed = true;
       result.scores = { puzzle1: { attempts } };
@@ -279,7 +325,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       // Failed
       result.failed = true;
       result.completed = true;
-      result.score = undefined;
       result.scores = { puzzle1: { attempts: -1 } };
     }
     
@@ -319,13 +364,11 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       // No green emoji = failed
       result.failed = true;
       result.completed = false;
-      result.score = undefined;
       result.scores = { puzzle1: { attempts: -1 } };
     } else {
       // Count red emojis before green
       const beforeGreen = emojiString.substring(0, greenIndex);
       const redCount = (beforeGreen.match(/🟥/gu) || []).length;
-      result.score = redCount;
       result.failed = false;
       result.completed = true;
       result.scores = { puzzle1: { attempts: redCount } };
@@ -349,12 +392,11 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (!fractionMatch) {
       throw new Error('❌ Incorrect share text for r34dle. Could not find score in format "n/10"');
     }
-    const correctCount = parseInt(fractionMatch[1], 10);
-    result.score = correctCount;
+    const solved = parseInt(fractionMatch[1], 10);
     result.maxAttempts = 10;
     result.completed = true;
-    result.failed = correctCount < result.maxAttempts;
-    result.scores = { puzzle1: { correct: correctCount } };
+    result.failed = solved < result.maxAttempts;
+    result.scores = { puzzle1: { solved: solved } };
     
     // Extract emoji grid (lines with 🟩🟥)
     const grid = extractEmojiGrid(lines, /[🟩🟥]/);
@@ -374,11 +416,10 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.gameName = 'Scrandle';
     result.puzzleNumber = scrandleMatch[3];
     const correctCount = parseInt(scrandleMatch[2], 10);
-    result.score = correctCount;
     result.maxAttempts = 10;
     result.completed = true;
     result.failed = correctCount < result.maxAttempts;
-    result.scores = { puzzle1: { correct: correctCount } };
+    result.scores = { puzzle1: { solved: correctCount } };
     
     // Store grid from match
     result.grid = scrandleMatch[1];
@@ -413,7 +454,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     });
     
     const solvedCount = colorRows.length;
-    result.score = solvedCount;
     result.maxAttempts = 4;
     result.completed = true;
     result.failed = solvedCount < 4;
@@ -462,7 +502,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       }
     }
     
-    result.score = successCount;
     result.maxAttempts = totalWords;
     result.maxGuessNumber = maxGuess;
     result.completed = true;
@@ -473,7 +512,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.scores = {
       puzzle1: {
         solved: successCount,
-        guesses: allSolved ? maxGuess : -1
+        attempts: allSolved ? maxGuess : -1
       }
     };
     
@@ -508,10 +547,8 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     }
     
     if (scoreStr.toUpperCase() === 'X') {
-      result.score = result.percentage;
       result.guessCount = undefined;
     } else {
-      result.score = parseInt(scoreStr, 10);
       result.guessCount = parseInt(scoreStr, 10);
     }
     
@@ -559,11 +596,9 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (scoreStr.toUpperCase() === 'X') {
       result.failed = true;
       result.completed = true;
-      result.score = undefined;
       result.scores = { puzzle1: { attempts: -1 } };
     } else {
       const attempts = parseInt(scoreStr, 10);
-      result.score = attempts;
       result.completed = true;
       result.failed = false;
       result.scores = { puzzle1: { attempts } };
@@ -602,12 +637,13 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
       accuracy = parseFloat(accuracyMatch[1]);
     }
 
+    let attemptsVal: number;
     if (scoreStr.toUpperCase() === 'X') {
       result.failed = true;
       result.completed = true;
-      result.score = -1;
+      attemptsVal = -1;
     } else {
-      result.score = parseInt(scoreStr, 10);
+      attemptsVal = parseInt(scoreStr, 10);
       result.completed = true;
       result.failed = false;
     }
@@ -615,7 +651,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Store all scores in scores field: attempts and accuracy
     result.scores = {
       puzzle1: {
-        attempts: result.score!,
+        attempts: attemptsVal,
         accuracy: typeof accuracy === 'number' ? accuracy : 0
       }
     };
@@ -688,8 +724,6 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Guesses: number of rows if solved, undefined if failed
     result.guessCount = result.failed ? undefined : numRows;
     result.maxAttempts = 5;
-    result.score = percent; // Keep score as percentage for compatibility
-    
     // Store all scores in scores field: accuracy and attempts
     result.scores = {
       puzzle1: {
@@ -715,11 +749,10 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     result.gameName = 'ColorGuesser';
     result.puzzleNumber = puzzleNumber;
     const scoreValue = parseInt(scoreStr, 10);
-    result.score = scoreValue;
     result.maxAttempts = parseInt(maxScoreStr, 10);
     result.completed = true;
     result.failed = false;
-    result.scores = { puzzle1: { score: scoreValue } };
+    result.scores = { puzzle1: { points: scoreValue } };
     
     return result;
   }
@@ -732,11 +765,10 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
         // Store time in milliseconds as integer (e.g., 2.4s -> 2400ms)
         const secondsStr = timingleMatch ? timingleMatch[2] : undefined;
         const timeMs = secondsStr ? Math.round(parseFloat(secondsStr) * 1000) : undefined;
-        result.score = timeMs;
-        result.completed = true;
-        result.failed = false;
-        result.grid = '';
-        result.scores = { puzzle1: { time_ms: timeMs } };
+          result.completed = true;
+          result.failed = false;
+          result.grid = '';
+          result.scores = { puzzle1: { time: timeMs } };
         return result;
   }
 
@@ -762,11 +794,11 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
         }
       }
     }
-    result.score = score;
+    const correct = score;
     result.maxAttempts = 15;
     result.completed = true;
     result.failed = false;
-    result.scores = { puzzle1: { correct: score } };
+    result.scores = { puzzle1: { solved: correct } };
     
     // Store the extracted grid
     if (gridLines.length > 0) {
@@ -788,7 +820,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (date) {
       result.puzzleNumber = date;
     }
-    result.score = parseInt(scoreStr, 10);
+    const solved = parseInt(scoreStr, 10);
     result.maxAttempts = parseInt(maxScoreStr, 10);
     
     // Extract uniqueness if present
@@ -805,7 +837,7 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Store all scores in scores field: solved, uniqueness, maxUniqueness
     result.scores = {
       puzzle1: {
-        solved: result.score!,
+        solved,
         uniqueness: uniqueness,
         maxUniqueness: maxUniqueness
       }
@@ -868,6 +900,36 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     return result;
   }
 
+  // Bandle
+  if (normalizedGameName === 'bandle') {
+    // Example header: "Bandle #1227 x/6" or "Bandle #1227 4/6"
+    const bandleMatch = text.match(/Bandle\s+#([\d,]+)\s+([Xx\d]+)\/(\d+)/i);
+    if (!bandleMatch) {
+      throw new Error('❌ Incorrect share text for Bandle. Expected format: "Bandle #... X/6 or n/6"');
+    }
+    const [, puzzleNumber, scoreStr, maxAttemptsStr] = bandleMatch;
+    result.gameName = 'Bandle';
+    result.puzzleNumber = puzzleNumber;
+    result.maxAttempts = parseInt(maxAttemptsStr, 10);
+
+    if (scoreStr.toUpperCase() === 'X') {
+      result.failed = true;
+      result.completed = true;
+      result.scores = { puzzle1: { attempts: -1 } };
+    } else {
+      const attempts = parseInt(scoreStr, 10);
+      result.completed = true;
+      result.failed = false;
+      result.scores = { puzzle1: { attempts } };
+    }
+
+    // Extract emoji/grid lines (black squares etc.)
+    const grid = extractEmojiGrid(lines, /[⬛⬜🟨🟩🟥]/);
+    if (grid) result.grid = grid;
+
+    return result;
+  }
+
   throw new Error(`❌ Incorrect share text for ${gameName}. Please check the format.`);
 }
 
@@ -887,10 +949,14 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
   
   // If a specific game is expected, validate and parse only that game
   if (expectedGameName) {
-    const result = parseSpecificGame(text, lines, expectedGameName);
+    let result = parseSpecificGame(text, lines, expectedGameName);
     // Ensure puzzleNumber is set (fallback to current date)
     if (result && !result.puzzleNumber) {
       result.puzzleNumber = getCurrentDate();
+    }
+    result = normalizeParsedShareText(result);
+    if (result && result.parseWarnings && result.parseWarnings.length > 0) {
+      throw new Error(`Share text parse warnings for ${expectedGameName}: ${result.parseWarnings.join('; ')}`);
     }
     return result;
   }
@@ -900,10 +966,11 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
   
   if (detectedGameName) {
     // Use the specific game parser
-    const result = parseSpecificGame(text, lines, detectedGameName);
+    let result = parseSpecificGame(text, lines, detectedGameName);
     if (result && !result.puzzleNumber) {
       result.puzzleNumber = getCurrentDate();
     }
+    result = normalizeParsedShareText(result);
     return result;
   }
 
@@ -930,17 +997,17 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
       result.gameName = gameName.trim();
       result.puzzleNumber = puzzleNumber;
       result.maxAttempts = parseInt(maxAttemptsStr, 10);
-      
+      let attemptsVal: number | undefined;
       if (scoreStr.toUpperCase() === 'X') {
+        attemptsVal = undefined;
         result.failed = true;
         result.completed = true;
-        result.score = undefined;
       } else {
-        result.score = parseInt(scoreStr, 10);
+        attemptsVal = parseInt(scoreStr, 10);
         result.completed = true;
         result.failed = false;
       }
-      
+      result.scores = { puzzle1: { attempts: attemptsVal === undefined ? -1 : attemptsVal } };
       scoreFound = true;
       break;
     }
@@ -950,17 +1017,17 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
     if (simpleMatch) {
       const [, scoreStr, maxAttemptsStr] = simpleMatch;
       result.maxAttempts = parseInt(maxAttemptsStr, 10);
-      
+      let attemptsVal: number | undefined;
       if (scoreStr.toUpperCase() === 'X') {
+        attemptsVal = undefined;
         result.failed = true;
         result.completed = true;
-        result.score = undefined;
       } else {
-        result.score = parseInt(scoreStr, 10);
+        attemptsVal = parseInt(scoreStr, 10);
         result.completed = true;
         result.failed = false;
       }
-      
+      result.scores = { puzzle1: { attempts: attemptsVal === undefined ? -1 : attemptsVal } };
       scoreFound = true;
       break;
     }
@@ -1024,7 +1091,7 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
     result.puzzleNumber = getCurrentDate();
   }
 
-  return result;
+  return normalizeParsedShareText(result);
 }
 
 /**
@@ -1199,21 +1266,23 @@ export function parseGamedleSummary(text: string): GamedleParsedResult | null {
     if (match) {
       const [, puzzleNumber, emojiString] = match;
       
-      // Count red emojis before first green emoji
+      // Count red emojis before first green emoji and convert to 1-based attempts
       const greenIndex = emojiString.indexOf('🟩');
-      let redCount: number | undefined;
-      
+      let attemptsVal: number | undefined;
+
       if (greenIndex === -1) {
-        // No green emoji = failed (score will be undefined)
-        redCount = undefined;
+        // No green emoji = failed -> store -1 to indicate failure
+        attemptsVal = -1;
       } else {
-        // Count red emojis before green
+        // Count red emojis before green and add one for the successful attempt
         const beforeGreen = emojiString.substring(0, greenIndex);
-        redCount = (beforeGreen.match(/🟥/gu) || []).length;
+        const redCount = (beforeGreen.match(/🟥/gu) || []).length;
+        attemptsVal = redCount + 1;
       }
-      
-      result.puzzleNumbers[puzzle.name as keyof typeof result.puzzleNumbers] = puzzleNumber;
-      result.modes[puzzle.name as keyof typeof result.modes] = redCount;
+
+      const key = puzzle.name.toLowerCase();
+      result.puzzleNumbers[key as keyof typeof result.puzzleNumbers] = puzzleNumber;
+      result.modes[key as keyof typeof result.modes] = attemptsVal;
     }
   }
 
