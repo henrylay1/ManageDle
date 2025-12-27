@@ -102,6 +102,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               onChange={(e) => onEmailChange(e.target.value)}
               className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+              autoComplete="email"
               required
             />
           </div>
@@ -117,6 +118,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               onChange={(e) => onPasswordChange(e.target.value)}
               className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+              autoComplete="current-password"
               required
             />
           </div>

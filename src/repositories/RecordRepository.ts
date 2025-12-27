@@ -27,7 +27,7 @@ export class RecordRepository {
    */
   async getByDate(date: string): Promise<GameRecord[]> {
     const records = await this.getAll();
-    return records.filter(r => r.date === date && r.localId === this.localId);
+    return records.filter(r => r.createdAt.split('T')[0] === date && r.localId === this.localId);
   }
 
   /**
@@ -43,7 +43,7 @@ export class RecordRepository {
     const todayRecords = userRecords.filter(record => {
       const game = gameMap.get(record.gameId);
       if (!game) return false; // Game not found, exclude record
-      const isCurrent = isCurrentPuzzle(record.date, game);
+      const isCurrent = isCurrentPuzzle(record.createdAt, game);
       return isCurrent;
     });
     return todayRecords;
@@ -63,7 +63,7 @@ export class RecordRepository {
   async getByGame(gameId: string): Promise<GameRecord[]> {
     const records = await this.getAll();
     return records.filter(r => r.gameId === gameId && r.localId === this.localId)
-      .sort((a, b) => b.date.localeCompare(a.date)); // Most recent first
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)); // Most recent first
   }
 
   /**
@@ -72,12 +72,71 @@ export class RecordRepository {
   async add(record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>): Promise<GameRecord> {
     const records = await this.getAll();
     
+    // Calculate streaks for this new record
+    let playstreak = 1;
+    let winstreak = 1;
+    let maxWinstreak = 1;
+    
+    // Get previous record for this game
+    const prevRecord = records
+      .filter(r => r.gameId === record.gameId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    
+    if (prevRecord?.metadata) {
+      maxWinstreak = prevRecord.metadata.maxWinstreak ?? 1;
+      
+      // Calculate streak based on consecutive days
+      const prevDate = new Date(prevRecord.createdAt).toISOString().slice(0, 10);
+      const currentDate = new Date(getTimestamp()).toISOString().slice(0, 10);
+      const prevDateObj = new Date(prevDate);
+      const currentDateObj = new Date(currentDate);
+      const daysDiff = (currentDateObj.getTime() - prevDateObj.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (daysDiff === 1) {
+        // Consecutive day - increment play streak
+        playstreak = (prevRecord.metadata.playstreak ?? 1) + 1;
+        
+        // Win streak: only increment if current record is a win
+        if (record.completed && !record.failed) {
+          // Check if previous was also a win
+          if (prevRecord.completed && !prevRecord.failed) {
+            winstreak = (prevRecord.metadata.winstreak ?? 1) + 1;
+          } else {
+            winstreak = 1; // Previous was not a win, reset to 1
+          }
+        } else {
+          winstreak = 0; // Current is not a win, reset to 0
+        }
+      } else {
+        // Missed day or same day - reset play streak to 1
+        playstreak = 1;
+        // Win streak: set to 1 if current is a win, otherwise 0
+        winstreak = (record.completed && !record.failed) ? 1 : 0;
+      }
+      
+      // Update max win streak if current win streak is higher
+      if (winstreak > maxWinstreak) {
+        maxWinstreak = winstreak;
+      }
+    } else {
+      // First record for this game
+      // Win streak: 1 if win, 0 if loss
+      winstreak = (record.completed && !record.failed) ? 1 : 0;
+      maxWinstreak = winstreak;
+    }
+    
     const newRecord: GameRecord = {
       ...record,
       recordId: generateUUID(),
       localId: this.localId,
       createdAt: getTimestamp(),
       updatedAt: getTimestamp(),
+      metadata: {
+        ...record.metadata,
+        playstreak: playstreak,
+        winstreak: winstreak,
+        maxWinstreak: maxWinstreak,
+      },
     };
 
     records.push(newRecord);

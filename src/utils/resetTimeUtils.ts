@@ -124,7 +124,8 @@ export function isCurrentPuzzle(recordDate: string, game: Game): boolean {
     let now = new Date();
     let todayStr;
     if (game.isAsynchronous) {
-      todayStr = now.toISOString().slice(0, 10); // local date as ISO string
+      // For async games with 00:00 reset, use UTC date
+      todayStr = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
     } else {
       todayStr = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
     }

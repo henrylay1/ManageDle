@@ -17,6 +17,7 @@ export interface Game {
   resetTime: string; // UTC time when game resets in HH:MM format (e.g., "00:00")
   isAsynchronous: boolean; // Whether game resets based on user's local timezone (true) or UTC (false)
   scoreTypes: Record<string, Record<string, number>>; // Score types and their max values e.g., {"puzzle1": {"attempts": 6}} or {"puzzle1": {"time": -1, "grade": -1}}
+  scoreDistributionConfig?: Record<string, number[]>; // Optional score categorization for distribution display. e.g., {"attempts": [0,1,2,3,4,5,6]} creates ranges 0-1, 2-2, 3-3, etc. If null/undefined, scores are distributed as-is.
 }
 
 /**
@@ -50,7 +51,6 @@ export interface GameRecord {
   gameId: string; // References Game.gameId
   localId: string; // Owner device/user identifier
   userId?: string; // Backend user ID (populated after migration)
-  date: string; // ISO 8601 timestamp (full date+time) for puzzle period tracking
   completed: boolean; // Whether the game was completed
   // score?: number; // Legacy score field removed, use scores instead
   scores?: Record<string, Record<string, number>>; // Structured scores matching game's scoreTypes e.g., {"puzzle1": {"attempts": 5}}
@@ -58,6 +58,9 @@ export interface GameRecord {
   metadata?: {
     shareTexts?: ShareTextEntry[]; // Multiple share texts for games with subtasks
     streakDay?: number;
+    playstreak?: number; // Current consecutive days played (resets on missed day)
+    winstreak?: number; // Current consecutive days won (resets on missed day or loss)
+    maxWinstreak?: number; // All-time max consecutive days won
     notes?: string;
     hasInvalidShareText?: boolean; // Flag to indicate share text doesn't match expected game format
   };
@@ -88,8 +91,10 @@ export interface GameStats {
   totalPlayed: number;
   totalWon: number;
   totalFailed: number;
-  currentStreak: number;
-  maxStreak: number;
+  playstreak: number;
+  winstreak: number;
+  maxWinstreak: number;
+  streakAtRisk: boolean; // True if latest record is from yesterday (streak needs to be saved today)
   averageScore: number;
   scoreDistribution: Record<string, number>; // {"1": 5, "2": 20, ...}
   lastPlayedDate?: string; // YYYY-MM-DD

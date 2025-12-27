@@ -128,18 +128,16 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     // Try to parse LoLdle summary when text is pasted
     if (text.length > 20 && game.displayName === 'LoLdle' && text.includes('#LoLdle')) {
       const loldleParsed = parseLoLdleSummary(text);
-      if (loldleParsed) {
-        const modeNames = ['Classic', 'Quote', 'Ability', 'Emoji', 'Splash'];
-        const newShareTexts = modeNames.map((modeName) => {
-          const score = loldleParsed.modes[modeName as keyof typeof loldleParsed.modes];
-          return {
-            name: modeName,
-            shareText: score !== undefined ? '(parsed from summary)' : '',
-            completed: score !== undefined,
-            failed: false,
-            scores: score !== undefined ? { puzzle1: { attempts: score } } : undefined,
-          };
-        });
+      if (loldleParsed && loldleParsed.scores) {
+        // Store as a single consolidated entry with all mode scores
+        const newShareTexts = [{
+          name: 'All Modes',
+          shareText: '(parsed from summary)',
+          completed: true,
+          failed: false,
+          scores: loldleParsed.scores,
+          puzzleNumber: loldleParsed.puzzleNumber,
+        }];
         setShareTexts(newShareTexts);
         setParseMessage('✓ Auto-filled all LoLdle modes from summary');
         setTimeout(() => setParseMessage(''), 3000);
@@ -213,6 +211,75 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     // Try to auto-fill when text is pasted
     if (text.length > 20) {
       try {
+        // Check for LoLdle summary format first
+        if (game.displayName === 'LoLdle' && text.includes('#LoLdle')) {
+          const loldleParsed = parseLoLdleSummary(text);
+          if (loldleParsed && loldleParsed.scores) {
+            setUseSummary(true);
+            setSummaryText(text);
+            setShareTexts([{
+              name: 'All Modes',
+              shareText: '(parsed from summary)',
+              completed: true,
+              failed: false,
+              // Store scores in additionalScores for display, but not as a property
+              additionalScores: Object.entries(loldleParsed.scores).map(([mode, scoreObj]) => ({
+                label: mode,
+                value: scoreObj.attempts ?? 0
+              })),
+              puzzleNumber: loldleParsed.puzzleNumber,
+            }]);
+            setParseMessage('✓ Auto-filled all LoLdle modes from summary');
+            setTimeout(() => setParseMessage(''), 3000);
+            return;
+          }
+        }
+        
+        // Check for Pokedle summary format
+        if (game.displayName === 'Pokedle' && text.includes('#Pokedle')) {
+          const pokedleParsed = parsePokedleSummary(text);
+          if (pokedleParsed) {
+            setUseSummary(true);
+            setSummaryText(text);
+            setShareTexts([
+              ...Object.entries(pokedleParsed.modes).map(([mode, score]) => ({
+                name: mode,
+                shareText: '(parsed from summary)',
+                completed: true,
+                failed: false,
+                additionalScores: [{ label: 'attempts', value: score ?? 0 }],
+                puzzleNumber: pokedleParsed.puzzleNumber,
+              }))
+            ]);
+            setParseMessage('✓ Auto-filled all Pokedle modes from summary');
+            setTimeout(() => setParseMessage(''), 3000);
+            return;
+          }
+        }
+        
+        // Check for Gamedle summary format
+        if (game.displayName === 'Gamedle' && text.includes('#Gamedle')) {
+          const gamedleParsed = parseGamedleSummary(text);
+          if (gamedleParsed) {
+            setUseSummary(true);
+            setSummaryText(text);
+            setShareTexts([
+              ...Object.entries(gamedleParsed.modes).map(([mode, score]) => ({
+                name: mode,
+                shareText: '(parsed from summary)',
+                completed: score !== undefined,
+                failed: score === undefined,
+                additionalScores: score !== undefined ? [{ label: 'attempts', value: score }] : [],
+                puzzleNumber: gamedleParsed.puzzleNumbers[mode as keyof typeof gamedleParsed.puzzleNumbers],
+              }))
+            ]);
+            setParseMessage('✓ Auto-filled all Gamedle puzzles from summary');
+            setTimeout(() => setParseMessage(''), 3000);
+            return;
+          }
+        }
+        
+        // Standard game record parsing
         const parsed = autoFillFromShareText(text, game.displayName);
         if (parsed && !('error' in parsed)) {
           updated[index].completed = parsed.completed;
@@ -234,10 +301,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             // Build scores object from parsed data for DB storage
             // Transform to use the correct score type key from game.scoreTypes
             let parsedScores = fullParsed.scores;
-            if (!parsedScores && fullParsed.score !== undefined) {
-              // Construct scores from legacy score field
-              parsedScores = { puzzle1: { attempts: fullParsed.score } };
-            }
             
             // Transform score keys to match game.scoreTypes
             if (parsedScores && game.scoreTypes) {
@@ -272,55 +335,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             }
             
             (updated[index] as any).scores = parsedScores;
-            
-            // For Pokedoku, store uniqueness in additionalScores for display
-            if (game.displayName === 'Pokedoku' && fullParsed.uniqueness !== undefined && fullParsed.maxUniqueness !== undefined) {
-              updated[index].additionalScores = [{
-                label: 'Uniqueness',
-                value: fullParsed.uniqueness,
-                maxValue: fullParsed.maxUniqueness
-              }];
-            }
-            
-            // For Quordle, store max guess number in additionalScores
-            if (game.displayName === 'Quordle') {
-              const solved = fullParsed.score; // Quordle uses score for number solved
-              const allSolved = solved === 4;
-              updated[index].additionalScores = [{
-                label: 'Guesses',
-                value: allSolved ? (fullParsed.maxGuessNumber || -1) : -1,
-                maxValue: 9
-              }];
-            }
-            
-            // For Worldle, store guesses in additionalScores
-            if (game.displayName === 'Worldle') {
-              updated[index].additionalScores = [{
-                label: 'Guesses',
-                value: fullParsed.failed ? -1 : (fullParsed.guessCount || -1),
-                maxValue: undefined
-              }];
-            }
-            
-            // For Hexcodle, store percentage in additionalScores
-            if (game.displayName === 'Hexcodle') {
-              updated[index].failed = fullParsed.failed;
-              updated[index].maxAttempts = 5;
-              updated[index].additionalScores = [{
-                label: 'Score',
-                value: fullParsed.percentage ?? 0,
-                maxValue: undefined
-              }];
-            }
-            
-            // For Colorfle, store accuracy in additionalScores
-            if (game.displayName === 'Colorfle') {
-              updated[index].maxAttempts = fullParsed.maxAttempts;
-              updated[index].failed = fullParsed.failed;
-              // Filter out undefined values from additionalScores
-              updated[index].additionalScores = (fullParsed.additionalScores || [])
-                .filter((s): s is { label: string; value: number; maxValue?: number } => s.value !== undefined);
-            }
             
             // For Wantedle, store grade
             if (game.displayName === 'Wantedle') {
@@ -665,33 +679,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                         })()}
                       </div>
                     </div>
-                    
-                    {/* Always show additionalScores when present (for metrics like accuracy, uniqueness, etc.) */}
-                    {entry.additionalScores && entry.additionalScores.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.5em', alignItems: 'center' }}>
-                        {entry.additionalScores.map((additionalScore, scoreIndex) => (
-                          <div key={scoreIndex} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <label style={{ fontSize: '0.8em', color: '#aaa' }}>{additionalScore.label}</label>
-                            <input
-                              type="text"
-                              className="score-input-small"
-                              value={
-                                typeof additionalScore.value === 'number' 
-                                  ? `${additionalScore.value}${additionalScore.maxValue ? `/${additionalScore.maxValue}` : '%'}` 
-                                  : typeof additionalScore.value === 'string'
-                                    ? additionalScore.value // For Wantedle grade (e.g., "B")
-                                    : 'N/A'
-                              }
-                              placeholder={additionalScore.label}
-                              title={`${additionalScore.label}${additionalScore.maxValue ? ` (max: ${additionalScore.maxValue})` : ''}`}
-                              readOnly
-                              tabIndex={-1}
-                              style={{ pointerEvents: 'none', background: '#222', color: '#aaa', textAlign: 'center', width: 60 }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>

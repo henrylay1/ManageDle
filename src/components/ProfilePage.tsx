@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
-import { createClient } from '@supabase/supabase-js';
-// Initialize Supabase client (replace with your actual project URL and anon key)
-const supabaseUrl = 'https://otlaufzytqqtuoqqexgg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bGF1Znp5dHFxdHVvcXFleGdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyNjE4NzcsImV4cCI6MjA4MTgzNzg3N30.mlKp_FPsIymZb69YD5nsEpQymlXHunvDVN008iVibw4';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/lib/supabase';
 import ActivityHeatmap from './ActivityHeatmap';
 import { PfpPicker } from './PfpPicker';
 import './ProfilePage.css';

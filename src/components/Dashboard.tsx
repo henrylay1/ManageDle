@@ -114,6 +114,7 @@ function Dashboard() {
   const [showRemove, setShowRemove] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [isRegisterFromStats, setIsRegisterFromStats] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
@@ -147,6 +148,12 @@ function Dashboard() {
   };
 
   const handleViewStats = (game: Game) => {
+    if (!isAuthenticated) {
+      setSelectedGame(game);
+      setIsRegisterFromStats(true);
+      setShowRegisterModal(true);
+      return;
+    }
     setSelectedGame(game);
     setShowStats(true);
   };
@@ -308,6 +315,10 @@ function Dashboard() {
                   onLogScore={() => handleLogScore(game)}
                   onViewStats={() => handleViewStats(game)}
                   onRemove={() => handleRemoveGame(game)}
+                  onReset={async () => {
+                    // Refresh today's records when a reset occurs
+                    await useAppStore.getState().loadTodayRecords();
+                  }}
                 />
               ))}
           </div>
@@ -517,15 +528,20 @@ function Dashboard() {
 
       <RegisterModal
         isOpen={showRegisterModal}
-        onClose={() => setShowRegisterModal(false)}
+        onClose={() => {
+          setShowRegisterModal(false);
+          setIsRegisterFromStats(false);
+        }}
         onSwitchToLogin={() => {
           setShowRegisterModal(false);
+          setIsRegisterFromStats(false);
           setShowLoginModal(true);
         }}
         email={authEmail}
         password={authPassword}
         onEmailChange={setAuthEmail}
         onPasswordChange={setAuthPassword}
+        isFromStats={isRegisterFromStats}
       />
 
       <AccountMenu

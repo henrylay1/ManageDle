@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
+import { sanitizeDisplayName, sanitizeInput, isValidEmail, isStrongPassword, isValidUrl } from '@/utils/sanitization';
 
 export interface AuthUser {
   id: string;
@@ -13,6 +14,26 @@ export class AuthService {
    * Register a new user with email and password
    */
   async register(email: string, password: string, displayName?: string): Promise<AuthUser> {
+    // Validate and sanitize inputs
+    const sanitizedEmail = sanitizeInput(email.toLowerCase());
+    
+    if (!isValidEmail(sanitizedEmail)) {
+      throw new Error('Invalid email format');
+    }
+    
+    const passwordValidation = isStrongPassword(password);
+    if (!passwordValidation.valid) {
+      throw new Error(passwordValidation.message || 'Password does not meet requirements');
+    }
+    
+    const sanitizedDisplayName = displayName 
+      ? sanitizeDisplayName(displayName)
+      : sanitizedEmail.split('@')[0];
+    
+    if (!sanitizedDisplayName) {
+      throw new Error('Display name cannot be empty');
+    }
+    
     // Default avatar for new users
     let supabaseUrl = '';
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) {
@@ -30,11 +51,11 @@ export class AuthService {
       '.supabase.co/storage/v1/object/public/profile-pictures/def_pfp_cat_1.jpg';
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: sanitizedEmail,
       password,
       options: {
         data: {
-          display_name: displayName || email.split('@')[0],
+          display_name: sanitizedDisplayName,
           avatar_url: defaultAvatarUrl,
         },
       },
@@ -44,7 +65,10 @@ export class AuthService {
       // Check if user already exists in auth but not in public.users
       if (error.message.includes('already registered') || error.message.includes('already exists')) {
         // Try to get the existing user's ID from auth
-        const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData } = await supabase.auth.signInWithPassword({ 
+          email: sanitizedEmail, 
+          password 
+        });
         
         if (signInData?.user) {
           // User exists in auth, check if they exist in public.users
@@ -61,7 +85,7 @@ export class AuthService {
               .insert({
                 id: signInData.user.id,
                 email: signInData.user.email!,
-                display_name: displayName || email.split('@')[0],
+                display_name: sanitizedDisplayName,
                 avatar_url: defaultAvatarUrl,
               });
             
@@ -74,7 +98,7 @@ export class AuthService {
               .from('user_profile_config')
               .insert({
                 user_id: signInData.user.id,
-                display_name: displayName || email.split('@')[0],
+                display_name: sanitizedDisplayName,
                 theme: 'light',
                 notifications_enabled: true,
                 active_games: [],
@@ -88,7 +112,7 @@ export class AuthService {
             return {
               id: signInData.user.id,
               email: signInData.user.email!,
-              displayName: displayName || email.split('@')[0],
+              displayName: sanitizedDisplayName,
               avatarUrl: defaultAvatarUrl,
             };
           }
@@ -110,7 +134,7 @@ export class AuthService {
       .from('user_profile_config')
       .insert({
         user_id: data.user.id,
-        display_name: displayName || email.split('@')[0],
+        display_name: sanitizedDisplayName,
         theme: 'light',
         notifications_enabled: true,
         active_games: [],
@@ -128,8 +152,14 @@ export class AuthService {
    * Sign in with email and password
    */
   async login(email: string, password: string): Promise<AuthUser> {
+    const sanitizedEmail = sanitizeInput(email.toLowerCase());
+    
+    if (!isValidEmail(sanitizedEmail)) {
+      throw new Error('Invalid email format');
+    }
+    
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: sanitizedEmail,
       password,
     });
 
@@ -196,6 +226,17 @@ export class AuthService {
    * Update user profile
    */
   async updateProfile(displayName: string, avatarUrl?: string): Promise<void> {
+    const sanitizedDisplayName = sanitizeDisplayName(displayName);
+    
+    if (!sanitizedDisplayName) {
+      throw new Error('Display name cannot be empty');
+    }
+    
+    // Validate avatar URL if provided
+    if (avatarUrl && !isValidUrl(avatarUrl)) {
+      throw new Error('Invalid avatar URL');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -205,7 +246,7 @@ export class AuthService {
     const { error } = await supabase
       .from('users')
       .update({
-        display_name: displayName,
+        display_name: sanitizedDisplayName,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString(),
       })

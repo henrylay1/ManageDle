@@ -13,6 +13,7 @@ interface RegisterModalProps {
   password: string;
   onEmailChange: (email: string) => void;
   onPasswordChange: (password: string) => void;
+  isFromStats?: boolean;
 }
 
 export const RegisterModal: React.FC<RegisterModalProps> = ({ 
@@ -22,7 +23,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   email,
   password,
   onEmailChange,
-  onPasswordChange
+  onPasswordChange,
+  isFromStats = false
 }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -114,6 +116,21 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
         </button>
         <h2 className="text-2xl font-bold mb-4">Create Account</h2>
         
+        {isFromStats && (
+          <div style={{
+            backgroundColor: '#e3f2fd',
+            border: '1px solid #90caf9',
+            borderRadius: '6px',
+            padding: '0.75rem 1rem',
+            marginBottom: '1.5rem',
+            color: '#1565c0',
+            fontSize: '0.875rem',
+            fontWeight: 500
+          }}>
+            📊 Please register to sync data to cloud and view stats.
+          </div>
+        )}
+        
         {showMigrationInfo ? (
           <div className="p-4 bg-green-100 text-green-700 rounded-md">
             <p className="font-semibold">✅ Account created successfully!</p>
@@ -132,6 +149,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+                  autoComplete="name"
                   placeholder="Optional"
                 />
               </div>
@@ -147,6 +165,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   onChange={(e) => onEmailChange(e.target.value)}
                   className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -162,6 +181,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   onChange={(e) => onPasswordChange(e.target.value)}
                   className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+                  autoComplete="new-password"
                   required
                   minLength={6}
                 />
@@ -178,6 +198,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+                  autoComplete="new-password"
                   required
                   minLength={6}
                 />

@@ -7,6 +7,8 @@ interface UserGameStats {
   wins: number;
   plays: number;
   icon: string;
+  streak: number;
+  maxStreak: number;
 }
 
 interface UserProfileModalProps {
@@ -43,7 +45,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       // Fetch user's game records
       const { data: recordsData, error: recordsError } = await supabase
         .from('game_records')
-        .select('game_id, completed, failed')
+        .select('game_id, completed, failed, metadata')
         .eq('user_id', userId);
 
       if (recordsError) {
@@ -63,16 +65,32 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         return;
       }
 
-      // Aggregate stats by game_id
-      const statsMap = new Map<string, { wins: number; plays: number }>();
+      // Aggregate stats by game_id - get latest record for each game to access streak/maxStreak
+      const statsMap = new Map<string, { wins: number; plays: number; streak: number; maxStreak: number }>();
+      const latestRecordsMap = new Map<string, any>(); // Track latest record per game
+      
       (recordsData || []).forEach(record => {
+        // Track latest record for this game
+        if (!latestRecordsMap.has(record.game_id)) {
+          latestRecordsMap.set(record.game_id, record);
+        }
+        
         if (!statsMap.has(record.game_id)) {
-          statsMap.set(record.game_id, { wins: 0, plays: 0 });
+          statsMap.set(record.game_id, { wins: 0, plays: 0, streak: 0, maxStreak: 0 });
         }
         const stat = statsMap.get(record.game_id)!;
         stat.plays++;
         if (record.completed && !record.failed) {
           stat.wins++;
+        }
+      });
+
+      // Update streak/maxStreak from latest records
+      latestRecordsMap.forEach((latestRecord, gameId) => {
+        const stat = statsMap.get(gameId);
+        if (stat && latestRecord.metadata) {
+          stat.streak = latestRecord.metadata.streak ?? 0;
+          stat.maxStreak = latestRecord.metadata.maxStreak ?? 0;
         }
       });
 
@@ -86,6 +104,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           wins: stat.wins,
           plays: stat.plays,
           icon: game?.icon || '🎮',
+          streak: stat.streak,
+          maxStreak: stat.maxStreak,
         });
       });
 
@@ -189,14 +209,22 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <span className="text-2xl">{stat.icon}</span>
                     <span className="font-medium">{stat.gameName}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <span className="text-gray-600 text-sm">Wins:</span>
-                      <span className="font-bold text-lg ml-2">{stat.wins}</span>
+                      <span className="text-gray-600 text-xs">Streak</span>
+                      <span className="font-bold text-base block">{stat.streak}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-gray-600 text-sm">Plays:</span>
-                      <span className="font-bold text-lg ml-2">{stat.plays}</span>
+                      <span className="text-gray-600 text-xs">Max</span>
+                      <span className="font-bold text-base block">{stat.maxStreak}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-600 text-xs">Wins</span>
+                      <span className="font-bold text-base block">{stat.wins}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-600 text-xs">Plays</span>
+                      <span className="font-bold text-base block">{stat.plays}</span>
                     </div>
                   </div>
                 </div>

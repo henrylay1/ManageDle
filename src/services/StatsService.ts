@@ -1,6 +1,6 @@
-import { GameRecord, GameStats } from '@/types/models';
+import { GameRecord, GameStats, Game } from '@/types/models';
 import { RecordRepository } from '@/repositories/RecordRepository';
-import { getTodayDate, getYesterdayDate, getTimestamp } from '@/utils/helpers';
+import { getTimestamp, getYesterdayDate } from '@/utils/helpers';
 
 /**
  * Service for computing game statistics
@@ -14,7 +14,7 @@ export class StatsService {
   /**
    * Compute statistics for a specific game
    */
-  async computeStats(gameId: string): Promise<GameStats> {
+  async computeStats(gameId: string, game?: Game): Promise<GameStats> {
     const records = await this.recordRepo.getByGame(gameId);
     
     const totalPlayed = records.length;
@@ -22,7 +22,7 @@ export class StatsService {
     const totalFailed = records.filter(r => r.failed).length;
     
     // Calculate streaks
-    const { currentStreak, maxStreak } = this.calculateStreaks(records);
+    const { playstreak, winstreak, maxWinstreak, streakAtRisk } = this.calculateStreaks(records);
     
     // Calculate average score (only for completed games)
     // Use the first score type in scores for calculations
@@ -41,20 +41,51 @@ export class StatsService {
       return 0;
     };
 
-    const completedRecords = records.filter(r => r.completed && !r.failed && getPrimaryScore(r) !== undefined);
+    const completedRecords = records.filter(r => r.completed && getPrimaryScore(r) !== undefined);
     const averageScore = completedRecords.length > 0
       ? completedRecords.reduce((sum, r) => sum + getPrimaryScore(r), 0) / completedRecords.length
       : 0;
 
-    // Score distribution
+    // Score distribution with optional categorization
     const scoreDistribution: Record<string, number> = {};
+    
+    // Get or generate the score distribution config
+    let scoreDistributionConfig = game?.scoreDistributionConfig;
+    if (!scoreDistributionConfig && game?.scoreTypes) {
+      // Generate default config from scoreTypes
+      scoreDistributionConfig = this.generateDefaultScoreDistributionConfig(game.scoreTypes);
+      // Update the game object with the generated config
+      if (game) {
+        game.scoreDistributionConfig = scoreDistributionConfig;
+      }
+    }
+    
+    // Get the primary score type key for categorization config
+    let primaryScoreTypeKey = '';
+    if (scoreDistributionConfig && Object.keys(scoreDistributionConfig).length > 0) {
+      primaryScoreTypeKey = Object.keys(scoreDistributionConfig)[0];
+    }
+    
     completedRecords.forEach(r => {
-      const score = String(getPrimaryScore(r));
-      scoreDistribution[score] = (scoreDistribution[score] || 0) + 1;
+      const score = getPrimaryScore(r);
+      
+      // Determine the category key for distribution
+      let categoryKey: string;
+      
+      if (scoreDistributionConfig && primaryScoreTypeKey && primaryScoreTypeKey in scoreDistributionConfig) {
+        // Use categorized distribution based on config
+        const boundaries = scoreDistributionConfig[primaryScoreTypeKey];
+        categoryKey = this.getCategoryKey(score, boundaries);
+      } else {
+        // Use score as-is (default behavior)
+        categoryKey = String(score);
+      }
+      
+      scoreDistribution[categoryKey] = (scoreDistribution[categoryKey] || 0) + 1;
     });
     
     // Last played date
-    const lastPlayedDate = records.length > 0 ? records[0].date : undefined;
+    const lastPlayedDate = records.length > 0 ? records[0].createdAt.split('T')[0] : undefined;
     
     return {
       gameId,
@@ -62,8 +93,10 @@ export class StatsService {
       totalPlayed,
       totalWon,
       totalFailed,
-      currentStreak,
-      maxStreak,
+      playstreak,
+      winstreak,
+      maxWinstreak,
+      streakAtRisk,
       averageScore: Math.round(averageScore * 100) / 100,
       scoreDistribution,
       lastPlayedDate,
@@ -72,80 +105,122 @@ export class StatsService {
   }
 
   /**
-   * Calculate current and max streaks
+   * Get the category key for a score based on config format [start, end, interval]
+   * e.g., [0, 500, 100] generates buckets: "0-100", "100-200", ..., "400-500"
+   * For interval of 1, displays as single numbers: "1", "2", "3", etc.
+   * e.g., [1, 6, 1] generates: "1", "2", "3", "4", "5", "6"
    */
-  private calculateStreaks(records: GameRecord[]): { currentStreak: number; maxStreak: number } {
-    if (records.length === 0) {
-      return { currentStreak: 0, maxStreak: 0 };
-    }
-
-    // Sort records by date (most recent first)
-    const sortedRecords = [...records]
-      .filter(r => r.completed && !r.failed)
-      .sort((a, b) => b.date.localeCompare(a.date));
-
-    if (sortedRecords.length === 0) {
-      return { currentStreak: 0, maxStreak: 0 };
-    }
-
-    let currentStreak = 0;
-    let maxStreak = 0;
-    let tempStreak = 0;
-    let expectedDate = getTodayDate();
-
-    // Check if played today or yesterday to start current streak
-    const mostRecentDate = sortedRecords[0].date;
-    const today = getTodayDate();
-    const yesterday = getYesterdayDate();
-
-    if (mostRecentDate === today || mostRecentDate === yesterday) {
-      currentStreak = 1;
-      expectedDate = mostRecentDate === today ? yesterday : this.getPreviousDate(yesterday);
-      tempStreak = 1;
-
-      // Continue counting backwards
-      for (let i = 1; i < sortedRecords.length; i++) {
-        const record = sortedRecords[i];
-        if (record.date === expectedDate) {
-          currentStreak++;
-          tempStreak++;
-          expectedDate = this.getPreviousDate(expectedDate);
-        } else {
-          break;
+  private getCategoryKey(score: number, boundaries: number[]): string {
+    // New format: [start, end, interval]
+    if (boundaries.length === 3) {
+      const [start, end, interval] = boundaries;
+      
+      // Find which bucket the score falls into
+      for (let current = start; current <= end; current += interval) {
+        const nextBucket = current + interval;
+        if (score >= current && score < nextBucket) {
+          // If interval is 1, just show the single value
+          if (interval === 1) {
+            return String(current);
+          }
+          return `${current}-${nextBucket}`;
         }
       }
-    }
-
-    // Calculate max streak
-    maxStreak = currentStreak;
-    tempStreak = 0;
-
-    for (let i = 0; i < sortedRecords.length; i++) {
-      if (i === 0) {
-        tempStreak = 1;
-        expectedDate = this.getPreviousDate(sortedRecords[i].date);
-      } else {
-        if (sortedRecords[i].date === expectedDate) {
-          tempStreak++;
-          expectedDate = this.getPreviousDate(sortedRecords[i].date);
-        } else {
-          maxStreak = Math.max(maxStreak, tempStreak);
-          tempStreak = 1;
-          expectedDate = this.getPreviousDate(sortedRecords[i].date);
+      
+      // If score is at or beyond the end
+      if (score >= end) {
+        if (interval === 1) {
+          return String(end);
         }
+        return `${end}+`;
+      }
+      
+      return String(score);
+    }
+    
+    // Fallback for old format (array of boundary values)
+    const sorted = [...boundaries].sort((a, b) => a - b);
+    
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const lower = sorted[i];
+      const upper = sorted[i + 1];
+      if (score >= lower && score < upper) {
+        return `${lower}-${upper}`;
       }
     }
-    maxStreak = Math.max(maxStreak, tempStreak);
-
-    return { currentStreak, maxStreak };
+    
+    // If score is beyond the last boundary
+    if (sorted.length > 0 && score >= sorted[sorted.length - 1]) {
+      return `${sorted[sorted.length - 1]}+`;
+    }
+    
+    return String(score);
   }
 
   /**
-   * Get the previous date (YYYY-MM-DD format)
+   * Calculate play streak, win streak, and max win streak
    */
-  private getPreviousDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    date.setDate(date.getDate() - 1);
-    return date.toISOString().split('T')[0];
+  private calculateStreaks(records: GameRecord[]): { playstreak: number; winstreak: number; maxWinstreak: number; streakAtRisk: boolean } {
+    if (records.length === 0) {
+      return { playstreak: 0, winstreak: 0, maxWinstreak: 0, streakAtRisk: false };
+    }
+
+    // Get the latest record (most recent by date)
+    const sortedRecords = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const latestRecord = sortedRecords[0];
+
+    // Extract date part (YYYY-MM-DD) from the record date (handles both full ISO and date-only formats)
+    const recordDatePart = latestRecord.createdAt.split('T')[0];
+    const yesterday = getYesterdayDate();
+
+    // Get streaks from metadata
+    let playstreak = latestRecord.metadata?.playstreak ?? 0;
+    let winstreak = latestRecord.metadata?.winstreak ?? 0;
+    const maxWinstreak = latestRecord.metadata?.maxWinstreak ?? 0;
+
+    // Determine streak status based on record date
+    let streakAtRisk = false;
+    
+    if (recordDatePart === yesterday) {
+      // Latest record is from yesterday - streaks are at risk (need to play today to maintain)
+      streakAtRisk = true;
+    } else if (recordDatePart < yesterday) {
+      // Latest record is 2 or more days old - streaks are broken
+      playstreak = 0;
+      winstreak = 0;
+    }
+    // If recordDatePart >= today, show streaks normally
+
+    return { playstreak, winstreak, maxWinstreak, streakAtRisk };
+  }
+  /**
+   * Generate default score distribution config from scoreTypes
+   * Uses 0 to max value with interval of ceiling(max/10)
+   */
+  private generateDefaultScoreDistributionConfig(scoreTypes: Record<string, Record<string, number>>): Record<string, number[]> {
+    const config: Record<string, number[]> = {};
+    
+    // Get the first puzzle key and its first score type
+    const puzzleKeys = Object.keys(scoreTypes);
+    if (puzzleKeys.length === 0) return config;
+    
+    const firstPuzzle = puzzleKeys[0];
+    const scoreTypeKeys = Object.keys(scoreTypes[firstPuzzle]);
+    if (scoreTypeKeys.length === 0) return config;
+    
+    const scoreTypeKey = scoreTypeKeys[0];
+    const maxValue = scoreTypes[firstPuzzle][scoreTypeKey];
+    
+    // Generate [start, end, interval] format
+    if (maxValue === -1 || maxValue === undefined) {
+      // If max is undefined or -1, use a default interval
+      config[scoreTypeKey] = [0, 10, 1];
+    } else {
+      // Calculate interval as ceiling(max/10), minimum 1
+      const interval = Math.max(1, Math.ceil(maxValue / 10));
+      config[scoreTypeKey] = [0, maxValue, interval];
+    }
+    
+    return config;
   }
 }

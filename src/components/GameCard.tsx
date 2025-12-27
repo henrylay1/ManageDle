@@ -1,6 +1,6 @@
 import { Game, GameRecord } from '@/types/models';
-import { formatTimeUntilReset } from '@/utils/resetTimeUtils';
-import { useEffect, useState } from 'react';
+import { formatTimeUntilReset, getTimeUntilReset } from '@/utils/resetTimeUtils';
+import { useEffect, useState, useRef } from 'react';
 import './Buttons.css';
 import './GameCard.css';
 
@@ -10,9 +10,26 @@ import './GameCard.css';
 function formatScore(record: GameRecord, game: Game): string {
   // New structure: use record.scores and game.scoreTypes
   if (record.scores && game.scoreTypes) {
-    // Get the first puzzle key (e.g., "puzzle1")
     const puzzleKeys = Object.keys(record.scores);
     if (puzzleKeys.length === 0) return 'N/A';
+    
+    // Check if this is a multi-puzzle game (like LoLdle with emoji, quote, ability, etc.)
+    // Multi-puzzle games have multiple keys that are NOT "puzzle1", "puzzle2", etc.
+    const isMultiPuzzle = puzzleKeys.length > 1 && !puzzleKeys.every(k => k.match(/^puzzle\d+$/));
+    
+    if (isMultiPuzzle) {
+      // For multi-puzzle games, sum up the attempts across all puzzles
+      let totalAttempts = 0;
+      for (const puzzleKey of puzzleKeys) {
+        const scoreValue = record.scores[puzzleKey];
+        if (scoreValue?.attempts !== undefined && scoreValue.attempts >= 0) {
+          totalAttempts += scoreValue.attempts;
+        }
+      }
+      return String(totalAttempts);
+    }
+    
+    // Single puzzle game - use existing logic
     const firstPuzzle = puzzleKeys[0];
     const actualScores = record.scores[firstPuzzle];
     const maxScores = game.scoreTypes[firstPuzzle];
@@ -33,8 +50,8 @@ function formatScore(record: GameRecord, game: Game): string {
         return actualValue === -1 ? `X/${maxValue}` : `${actualValue}/${maxValue}`;
       }
     } else if (primaryType === 'time') {
-      // Time in milliseconds, display as seconds
-      const timeInSeconds = ((actualValue ?? 0) / 1000).toFixed(1);
+      // Time in milliseconds, display as seconds with full precision
+      const timeInSeconds = (actualValue ?? 0) / 1000;
       return `${timeInSeconds}s`;
     } else if (primaryType === 'accuracy') {
       // Percentage
@@ -48,33 +65,6 @@ function formatScore(record: GameRecord, game: Game): string {
   return 'N/A';
 }
 
-/**
- * Get display label for score based on game's scoreTypes
- */
-function getScoreLabel(game: Game, record?: GameRecord): string {
-  // Prefer to derive from record.scores if available
-  if (record && record.scores) {
-    const puzzleKeys = Object.keys(record.scores);
-    if (puzzleKeys.length > 0) {
-      const firstPuzzle = puzzleKeys[0];
-      const scoreTypes = record.scores[firstPuzzle];
-      const primaryType = Object.keys(scoreTypes)[0];
-      return primaryType.charAt(0).toUpperCase() + primaryType.slice(1);
-    }
-  }
-  // Fallback to game.scoreTypes if present
-  if (game.scoreTypes) {
-    const puzzleKeys = Object.keys(game.scoreTypes);
-    if (puzzleKeys.length > 0) {
-      const firstPuzzle = puzzleKeys[0];
-      const scoreTypes = game.scoreTypes[firstPuzzle];
-      const primaryType = Object.keys(scoreTypes)[0];
-      return primaryType.charAt(0).toUpperCase() + primaryType.slice(1);
-    }
-  }
-  // If no score type found, fallback to generic label
-  return 'Score';
-}
 
 interface GameCardProps {
   game: Game;
@@ -83,22 +73,33 @@ interface GameCardProps {
   onLogScore: () => void;
   onViewStats: () => void;
   onRemove?: () => void;
+  onReset?: () => void;
 }
 
-function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: GameCardProps) {
+function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset }: GameCardProps) {
   const isCompleted = record?.completed || false;
   const hasError = record?.metadata?.hasInvalidShareText || false;
   const isFailed = record?.failed || false;
   const isSuccess = isCompleted && !hasError && !isFailed;
 
-  // Timer state for live countdown
+
+  // Timer state for live countdown and reset detection
   const [, setNow] = useState(Date.now());
+  const prevTimeRef = useRef<{ hours: number; minutes: number } | null>(null);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(Date.now());
-    }, 1000 * 60); // update every minute
+      const timeLeft = getTimeUntilReset(game);
+      const prev = prevTimeRef.current;
+      // If timer just crossed zero (reset happened)
+      if (prev && (prev.hours > 0 || prev.minutes > 0) && timeLeft.hours === 0 && timeLeft.minutes === 0) {
+        if (onReset) onReset();
+      }
+      prevTimeRef.current = timeLeft;
+    }, 1000 * 30); // check every 30 seconds for better accuracy
     return () => clearInterval(interval);
-  }, []);
+  }, [game, onReset]);
 
   const timeUntilReset = formatTimeUntilReset(game);
 
@@ -139,31 +140,91 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove }: G
         {record ? (
           <>
             <div className="game-card-score">
-              <div className="score-display">
-                <span className="score-label">
-                  {getScoreLabel(game, record)}
-                </span>
-                <span className="score-value">{formatScore(record, game)}</span>
-              </div>
+              {/* Display all scores from record.scores */}
+              {record.scores && Object.keys(record.scores).length > 0 && (() => {
+                const puzzleKeys = Object.keys(record.scores);
+                
+                // Check if this is a multi-puzzle game by looking at game.scoreTypes
+                // Multi-puzzle games have multiple top-level keys in scoreTypes (e.g., LoLdle has classic, quote, ability, emoji, splash)
+                const isMultiPuzzle = game.scoreTypes && Object.keys(game.scoreTypes).length > 1;
+                
+                if (isMultiPuzzle) {
+                  // Display all sub-puzzles for multi-puzzle games
+                  return (
+                    <>
+                      {/* Show total attempts as main score, then subpuzzle entries below */}
+                      <div>
+                        <div className="score-display">
+                          <span className="score-label">Total</span>
+                          <span className="score-value">{formatScore(record, game)}</span>
+                        </div>
+                        <div 
+                          className="share-texts-container" 
+                          style={{ 
+                            marginTop: '1rem', 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fit)', 
+                            gap: '0.75rem', 
+                            justifyItems: 'center' 
+                          }}
+                        >
+                          {puzzleKeys.map((puzzleKey) => {
+                            const scoreValue = record.scores![puzzleKey];
+                            const attempts = scoreValue?.attempts;
+                            const isCompleted = attempts !== undefined && attempts !== -1;
+                            return (
+                              <div 
+                                key={puzzleKey} 
+                                className={`share-text-entry-preview ${isCompleted ? 'success' : 'pending'}`}
+                              >
+                                <div className="entry-preview-name">{puzzleKey.charAt(0).toUpperCase() + puzzleKey.slice(1)}</div>
+                                <div className="entry-preview-status">{attempts}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  );
+                }
+                
+                // Single puzzle game - show all score types
+                const puzzleKey = puzzleKeys[0];
+                const scoreValues = record.scores[puzzleKey];
+                const scoreTypes = game.scoreTypes?.[puzzleKey] || {};
+                
+                return Object.keys(scoreValues).map((scoreTypeKey, index) => {
+                  const actualValue = scoreValues[scoreTypeKey];
+                  const maxValue = scoreTypes[scoreTypeKey];
+                  const label = scoreTypeKey.charAt(0).toUpperCase() + scoreTypeKey.slice(1);
+                  
+                  let displayValue: string;
+                  if (scoreTypeKey === 'time') {
+                    displayValue = `${(actualValue ?? 0) / 1000}s`;
+                  } else if (scoreTypeKey === 'accuracy' || scoreTypeKey === 'percentage') {
+                    displayValue = `${actualValue}%`;
+                  } else if (scoreTypeKey === 'grade') {
+                    displayValue = String(actualValue);
+                  } else if (maxValue === -1 || maxValue === undefined) {
+                    displayValue = actualValue === -1 ? 'X' : String(actualValue);
+                  } else {
+                    displayValue = actualValue === -1 ? `X/${maxValue}` : `${actualValue}/${maxValue}`;
+                  }
+                  
+                  return (
+                    <div key={index} className="score-display">
+                      <span className="score-label">{label}</span>
+                      <span className="score-value">{displayValue}</span>
+                    </div>
+                  );
+                });
+              })()}
               {game.displayName === 'Wantedle' && record.metadata?.shareTexts?.[0]?.grade && (
                 <div className="score-display">
                   <span className="score-label">Grade</span>
                   <span className="score-value">{record.metadata.shareTexts[0].grade}</span>
                 </div>
               )}
-              {record.metadata?.shareTexts?.[0]?.additionalScores?.map((additionalScore, index) => (
-                <div key={index} className="score-display">
-                  <span className="score-label">{additionalScore.label}</span>
-                  <span className="score-value">
-                    {additionalScore.label === 'Accuracy' && typeof additionalScore.value === 'number'
-                      ? `${additionalScore.value}%`
-                      : additionalScore.value === -1
-                        ? 'X'
-                        : additionalScore.value}
-                    {additionalScore.maxValue && additionalScore.label !== 'Accuracy' && `/${additionalScore.maxValue}`}
-                  </span>
-                </div>
-              ))}
             </div>
             
             {/* Display share texts */}

@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { GameRecord } from '@/types/models';
 import { RecordRepository } from '@/repositories/RecordRepository';
-import { useAppStore } from '@/store/appStore';
 import './ActivityHeatmap.css';
 
 interface ActivityData {
@@ -23,7 +22,6 @@ interface ActivityHeatmapProps {
 }
 
 export default function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
-  const {} = useAppStore();
   const [records, setRecords] = useState<GameRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,8 +51,8 @@ export default function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
     const activityMap: ActivityData = {};
     
     records.forEach(record => {
-      // Use the date field (ISO 8601 timestamp)
-      const dateStr = record.date.split('T')[0]; // Extract YYYY-MM-DD
+      // Use the createdAt field (ISO 8601 timestamp)
+      const dateStr = record.createdAt.split('T')[0]; // Extract YYYY-MM-DD
       activityMap[dateStr] = (activityMap[dateStr] || 0) + 1;
     });
 

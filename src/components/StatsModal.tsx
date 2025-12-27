@@ -73,12 +73,16 @@ function StatsModal({ game, onClose }: StatsModalProps) {
                   <div className="stat-label">Win Rate</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{stats.currentStreak}</div>
-                  <div className="stat-label">Current Streak</div>
+                  <div className="stat-value" style={stats.streakAtRisk ? { color: '#ffd700' } : undefined}>{stats.playstreak}</div>
+                  <div className="stat-label">Play Streak</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{stats.maxStreak}</div>
-                  <div className="stat-label">Max Streak</div>
+                  <div className="stat-value">{stats.winstreak}</div>
+                  <div className="stat-label">Win Streak</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{stats.maxWinstreak}</div>
+                  <div className="stat-label">Max Win Streak</div>
                 </div>
               </div>
 

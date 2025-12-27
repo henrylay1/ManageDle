@@ -9,6 +9,7 @@ import { StatsService } from '@/services/StatsService';
 import { authService, type AuthUser } from '@/services/authService';
 import { supabase } from '@/lib/supabase';
 import type { IStorageAdapter } from '@/types/storage';
+import { rateLimiter } from '@/utils/rateLimiter';
 
 // Initialize local storage (only for user and records, NOT games)
 const localStorage = new LocalStorageAdapter('managedle');
@@ -39,16 +40,18 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       return;
     }
     
-    // Create a map of existing records by (game_id, date) for deduplication
+    // Create a map of existing records by (game_id, createdAt date part) for deduplication
     const existingRecordsMap = new Map<string, any>();
     (existingRecords || []).forEach(record => {
-      const key = `${record.game_id}:${record.date}`;
+      const dateKey = record.created_at.split('T')[0];
+      const key = `${record.game_id}:${dateKey}`;
       existingRecordsMap.set(key, record);
     });
     
     // Filter out records that already exist
     const newRecords = localRecords.filter(record => {
-      const key = `${record.gameId}:${record.date}`;
+      const dateKey = record.createdAt.split('T')[0];
+      const key = `${record.gameId}:${dateKey}`;
       return !existingRecordsMap.has(key);
     });
     
@@ -80,7 +83,7 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       record_id: record.recordId,
       user_id: userId,
       game_id: record.gameId,
-      date: record.date,
+      created_at: record.createdAt,
       scores: record.scores ?? null,
       completed: record.completed,
       failed: record.failed,
@@ -257,8 +260,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   login: async (email, password) => {
+    // Rate limit login attempts
+    if (!rateLimiter.isAllowed('login', 5, 60000)) {
+      const timeUntilNext = rateLimiter.getTimeUntilNextAttempt('login', 5, 60000);
+      const minutesRemaining = Math.ceil(timeUntilNext / 60000);
+      throw new Error(`Too many login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`);
+    }
+    
     try {
       const authUser = await authService.login(email, password);
+      
+      // Reset rate limiter on successful login
+      rateLimiter.reset('login');
       
       // Merge locally cached records into user's account (includes active games)
       await mergeLocalRecordsIntoUserAccount(authUser.id);
@@ -288,6 +301,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   register: async (email, password, displayName) => {
+    // Rate limit registration attempts
+    if (!rateLimiter.isAllowed('register', 3, 300000)) {
+      const timeUntilNext = rateLimiter.getTimeUntilNextAttempt('register', 3, 300000);
+      const minutesRemaining = Math.ceil(timeUntilNext / 60000);
+      throw new Error(`Too many registration attempts. Please try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`);
+    }
+    
     try {
       const authUser = await authService.register(email, password, displayName);
       
@@ -640,7 +660,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
     const statsService = new StatsService(recordRepo, userId);
-    const stats = await statsService.computeStats(gameId);
+    const game = get().games.find(g => g.gameId === gameId);
+    const stats = await statsService.computeStats(gameId, game);
     
     // Cache the result
     const newCache = new Map(statsCache);
@@ -657,7 +678,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
     const statsService = new StatsService(recordRepo, userId);
-    const stats = await statsService.computeStats(gameId);
+    const game = get().games.find(g => g.gameId === gameId);
+    const stats = await statsService.computeStats(gameId, game);
     
     const statsCache = new Map(get().statsCache);
     statsCache.set(gameId, stats);

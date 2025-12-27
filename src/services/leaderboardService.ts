@@ -36,14 +36,14 @@ export class LeaderboardService {
           scores,
           completed,
           failed,
-          date,
+          created_at,
           users!inner (
             display_name,
             avatar_url
           )
         `)
         .eq('game_id', gameId)
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('[LeaderboardService] Failed to fetch leaderboard:', error);
@@ -88,7 +88,7 @@ export class LeaderboardService {
           }
         }
         
-        userStats.dates.push(record.date);
+        userStats.dates.push(record.created_at.split('T')[0]);
       }
 
       // Convert to leaderboard entries

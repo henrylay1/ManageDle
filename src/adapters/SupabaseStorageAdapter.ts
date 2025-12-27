@@ -143,7 +143,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       .from('game_records')
       .select('*')
       .eq('user_id', this.userId)
-      .order('date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Failed to fetch records:', error);
@@ -170,7 +170,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           record_id: record.recordId,
           user_id: this.userId,
           game_id: record.gameId,
-          date: record.date,
+          created_at: record.createdAt,
           scores: record.scores ?? null,
           completed: record.completed,
           failed: record.failed,
@@ -212,6 +212,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       resetTime: dbGame.reset_time || '00:00',
       isAsynchronous: dbGame.is_asynchronous ?? false,
       scoreTypes: dbGame.score_types || {},
+      scoreDistributionConfig: dbGame.score_distribution_config || undefined,
     };
   }
 
@@ -232,7 +233,6 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       gameId: dbRecord.game_id,
       localId: this.userId,
       userId: this.userId,
-      date: dbRecord.date,
       scores: dbRecord.scores ?? undefined,
       completed: dbRecord.completed,
       failed: dbRecord.failed,
