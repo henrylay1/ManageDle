@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublishable = import.meta.env.VITE_SUPABASE_PUBLISHABLE;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabasePublishable) {
   console.warn('⚠️ Supabase credentials not configured. Running in offline mode.');
-  console.warn('Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file');
+  console.warn('Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE to your .env file');
 }
 
 // Validate URL format to prevent misconfigurations
@@ -15,7 +15,7 @@ if (supabaseUrl && !supabaseUrl.match(/^https:\/\/.+\.supabase\.co$/)) {
 
 // Use placeholder values if credentials are missing (for offline mode)
 const url = supabaseUrl || 'https://placeholder.supabase.co';
-const key = supabaseAnonKey || 'placeholder-key';
+const key = supabasePublishable || 'placeholder-key';
 
 export const supabase = createClient(url, key, {
   auth: {

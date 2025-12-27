@@ -286,7 +286,7 @@ export class AuthService {
    * Check if Supabase is configured
    */
   isConfigured(): boolean {
-    return !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+    return !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_PUBLISHABLE;
   }
 }
 
