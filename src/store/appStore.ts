@@ -574,15 +574,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addRecord: async (record) => {
-    const { user, isAuthenticated, authUser } = get();
+    const { user, isAuthenticated, authUser, games } = get();
     if (!user) return;
     
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
-    await recordRepo.add(record);
+    
+    // Find the game for this record to enable timezone-aware streak calculation
+    console.log('[appStore.addRecord] Looking for game:', {
+      recordGameId: record.gameId,
+      availableGames: games.map(g => ({ gameId: g.gameId, displayName: g.displayName }))
+    });
+    const game = games.find(g => g.gameId === record.gameId);
+    console.log('[appStore.addRecord] Found game:', game ? {
+      gameId: game.gameId,
+      displayName: game.displayName,
+      isAsynchronous: game.isAsynchronous,
+      resetTime: game.resetTime
+    } : 'NOT FOUND');
+    await recordRepo.add(record, game);
     
     // Reload today's records
-    const games = get().games;
     const todayRecords = await recordRepo.getTodayRecords(games);
     set({ todayRecords });
     

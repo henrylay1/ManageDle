@@ -1,8 +1,6 @@
 # ManageDle TODO (Private)
 
 ## Features
-- [ ] Add admin-only changelog/todo viewer to site
-- [ ] Add ability to set custom reset time and async flag in AddGameModal
 - [ ] Add user-facing changelog modal
 - [ ] Add option to export/import user data
 
@@ -10,6 +8,8 @@
 - [ ] Polish mobile UI for modals and empty states
 - [ ] Accessibility improvements for all modals
 - [ ] Refactor record filtering for edge cases (DST, timezone changes)
+    - [X] Asynchronous (local time) midnight 
+    - [ ] Synchronous 
 
 ## Testing & Docs
 - [ ] Add tests for puzzle period logic

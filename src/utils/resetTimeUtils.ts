@@ -134,3 +134,60 @@ export function isCurrentPuzzle(recordDate: string, game: Game): boolean {
   // Otherwise, use timestamp comparison
   return recordTime >= lastReset;
 }
+
+/**
+ * Gets the puzzle day (YYYY-MM-DD) for a given timestamp based on game reset time
+ * For asynchronous games, this is in user's local timezone
+ * For synchronous games, this is in UTC
+ * @param timestamp - ISO 8601 timestamp
+ * @param game - The game with reset configuration
+ * @returns Puzzle day in YYYY-MM-DD format
+ */
+export function getPuzzleDay(timestamp: string, game: Game): string {
+  const recordTime = new Date(timestamp);
+  const [resetHour, resetMinute] = game.resetTime.split(':').map(Number);
+
+  console.log('[getPuzzleDay] Input:', { 
+    timestamp, 
+    gameId: game.gameId, 
+    isAsync: game.isAsynchronous, 
+    resetTime: game.resetTime,
+    dateObject: recordTime.toString()
+  });
+
+  let year: number, month: number, day: number, hour: number, minute: number;
+
+  if (game.isAsynchronous) {
+    // Use local time
+    year = recordTime.getFullYear();
+    month = recordTime.getMonth();
+    day = recordTime.getDate();
+    hour = recordTime.getHours();
+    minute = recordTime.getMinutes();
+    console.log('[getPuzzleDay] Using local time:', { year, month, day, hour, minute });
+  } else {
+    // Use UTC
+    year = recordTime.getUTCFullYear();
+    month = recordTime.getUTCMonth();
+    day = recordTime.getUTCDate();
+    hour = recordTime.getUTCHours();
+    minute = recordTime.getUTCMinutes();
+    console.log('[getPuzzleDay] Using UTC time:', { year, month, day, hour, minute });
+  }
+
+  // If current time is before reset time, puzzle day is previous day
+  if (hour < resetHour || (hour === resetHour && minute < resetMinute)) {
+    console.log('[getPuzzleDay] Before reset time, using previous day');
+    const prevDay = new Date(year, month, day - 1);
+    year = prevDay.getFullYear();
+    month = prevDay.getMonth();
+    day = prevDay.getDate();
+  }
+
+  // Format as YYYY-MM-DD
+  const mm = String(month + 1).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  const result = `${year}-${mm}-${dd}`;
+  console.log('[getPuzzleDay] Result:', result);
+  return result;
+}

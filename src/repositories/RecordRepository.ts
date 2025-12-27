@@ -1,7 +1,7 @@
 import { GameRecord } from '@/types/models';
 import { IStorageAdapter } from '@/types/storage';
 import { generateUUID, getTimestamp } from '@/utils/helpers';
-import { isCurrentPuzzle } from '@/utils/resetTimeUtils';
+import { isCurrentPuzzle, getPuzzleDay } from '@/utils/resetTimeUtils';
 import type { Game } from '@/types/models';
 
 const COLLECTION_NAME = 'records';
@@ -68,29 +68,80 @@ export class RecordRepository {
 
   /**
    * Add a new record
+   * @param record - The record data to add
+   * @param game - The game configuration (needed for streak calculation based on reset time)
    */
-  async add(record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>): Promise<GameRecord> {
+  async add(record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>, game?: Game): Promise<GameRecord> {
     const records = await this.getAll();
+    
+    console.log('[RecordRepository.add] Game parameter:', game ? {
+      gameId: game.gameId,
+      displayName: game.displayName,
+      isAsynchronous: game.isAsynchronous,
+      resetTime: game.resetTime
+    } : 'NOT PROVIDED');
     
     // Calculate streaks for this new record
     let playstreak = 1;
     let winstreak = 1;
     let maxWinstreak = 1;
     
-    // Get previous record for this game
+    // Get previous record for this game (most recent record strictly before current puzzle day)
+    const currentTimestamp = getTimestamp();
+    
+    // Determine puzzle day for current record
+    let currentPuzzleDay: string;
+    if (game) {
+      currentPuzzleDay = getPuzzleDay(currentTimestamp, game);
+    } else {
+      // Fallback to UTC date if game not provided
+      console.warn('[RecordRepository.add] Game not provided, using UTC fallback');
+      currentPuzzleDay = currentTimestamp.slice(0, 10);
+    }
+    
+    // Find previous record that is from a different (earlier) puzzle day
     const prevRecord = records
       .filter(r => r.gameId === record.gameId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      .filter(r => {
+        if (!r.createdAt) return false;
+        const recordPuzzleDay = game ? getPuzzleDay(r.createdAt, game) : r.createdAt.slice(0, 10);
+        console.log('[RecordRepository] Checking record:', {
+          timestamp: r.createdAt,
+          puzzleDay: recordPuzzleDay,
+          currentPuzzleDay,
+          isEarlier: recordPuzzleDay < currentPuzzleDay
+        });
+        return recordPuzzleDay < currentPuzzleDay;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
+    
+    console.log('[RecordRepository] Current puzzle day:', currentPuzzleDay);
+    console.log('[RecordRepository] Found previous record:', prevRecord ? {
+      timestamp: prevRecord.createdAt,
+      puzzleDay: game ? getPuzzleDay(prevRecord.createdAt, game) : prevRecord.createdAt.slice(0, 10),
+      metadata: prevRecord.metadata
+    } : 'none');
     
     if (prevRecord?.metadata) {
       maxWinstreak = prevRecord.metadata.maxWinstreak ?? 1;
       
-      // Calculate streak based on consecutive days
-      const prevDate = new Date(prevRecord.createdAt).toISOString().slice(0, 10);
-      const currentDate = new Date(getTimestamp()).toISOString().slice(0, 10);
-      const prevDateObj = new Date(prevDate);
-      const currentDateObj = new Date(currentDate);
-      const daysDiff = (currentDateObj.getTime() - prevDateObj.getTime()) / (1000 * 60 * 60 * 24);
+      // Calculate streak based on consecutive puzzle days
+      const prevPuzzleDay = game ? getPuzzleDay(prevRecord.createdAt, game) : prevRecord.createdAt.slice(0, 10);
+      
+      // Calculate days difference using puzzle days (YYYY-MM-DD strings)
+      const [py, pm, pd] = prevPuzzleDay.split('-').map(s => parseInt(s, 10));
+      const [cy, cm, cd] = currentPuzzleDay.split('-').map(s => parseInt(s, 10));
+      const prevUTC = Date.UTC(py, (pm || 1) - 1, pd || 1);
+      const currentUTC = Date.UTC(cy, (cm || 1) - 1, cd || 1);
+      const daysDiff = Math.round((currentUTC - prevUTC) / (1000 * 60 * 60 * 24));
+      
+      console.log('[RecordRepository] Streak calculation:', {
+        prevPuzzleDay,
+        currentPuzzleDay,
+        daysDiff,
+        prevStreak: prevRecord.metadata.playstreak,
+        prevWinstreak: prevRecord.metadata.winstreak
+      });
       
       if (daysDiff === 1) {
         // Consecutive day - increment play streak

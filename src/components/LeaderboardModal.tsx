@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { leaderboardService, type LeaderboardEntry } from '@/services/leaderboardService';
 import { useAppStore } from '@/store/appStore';
 import { UserProfileModal } from './UserProfileModal';
+import './LeaderboardModal.css';
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -95,30 +96,8 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999
-    }} onClick={onClose}>
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          width: '100%',
-          maxWidth: '56rem',
-          maxHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-          color: 'black'
-        }} onClick={(e) => e.stopPropagation()}>
+    <div className="leaderboard-backdrop" onClick={onClose}>
+      <div className="leaderboard-container" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">🏆 Leaderboard</h2>
         </div>
@@ -165,13 +144,13 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
               <p className="text-sm mt-2">Be the first to set a record!</p>
             </div>
           ) : (
-            <table className="w-full table-fixed">
+            <table className="leaderboard-table">
               <thead className="bg-gray-100 sticky top-0">
                 <tr>
-                  <th className="w-1/6 px-4 py-2 text-left text-sm font-semibold">Rank</th>
-                  <th className="w-1/2 px-4 py-2 text-left text-sm font-semibold">Player</th>
-                  <th className="w-1/6 px-4 py-2 text-center text-sm font-semibold">Wins</th>
-                  <th className="w-1/6 px-4 py-2 text-center text-sm font-semibold">Played</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold">Rank</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold">Player</th>
+                  <th className="px-4 py-2 text-center text-sm font-semibold">Wins</th>
+                  <th className="px-4 py-2 text-center text-sm font-semibold">Played</th>
                 </tr>
               </thead>
               <tbody>
@@ -180,44 +159,43 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                   return (
                     <tr
                       key={`${entry.userId}-${entry.gameId}`}
-                      className={`border-b hover:bg-gray-50 ${isCurrentUser ? 'bg-blue-50' : ''}`}
+                      className={`border-b hover:bg-gray-50 ${isCurrentUser ? 'current-user' : ''}`}
                     >
-                      <td className="w-1/6 px-4 py-3 text-sm font-medium">
+                      <td className="px-4 py-3 text-sm font-medium">
                         {index + 1}
                         {index === 0 && ' 🥇'}
                         {index === 1 && ' 🥈'}
                         {index === 2 && ' 🥉'}
                       </td>
-                      <td className="w-1/2 px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-sm">
                         <button
                           onClick={() => setSelectedUser({
                             userId: entry.userId,
                             displayName: entry.displayName,
                             avatarUrl: entry.avatarUrl,
                           })}
-                          className="flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 hover:bg-blue-100 hover:scale-110 active:scale-95 font-medium"
+                          className="leaderboard-player-button"
                         >
                           {typeof entry.avatarUrl === 'string' && (entry.avatarUrl.startsWith('http://') || entry.avatarUrl.startsWith('https://')) ? (
                             <img
                               src={entry.avatarUrl}
                               alt="Profile"
-                              className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lg flex-shrink-0"
-                              style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
+                              className="leaderboard-avatar"
                               title="Profile picture"
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-lg flex-shrink-0 text-gray-400">
+                            <div className="leaderboard-avatar-placeholder">
                               No Image
                             </div>
                           )}
-                          <span className={isCurrentUser ? 'font-semibold' : ''}>
+                          <span className={`leaderboard-player-name ${isCurrentUser ? 'current-user' : ''}`}>
                             {entry.displayName}
                             {isCurrentUser && ' (You)'}
                           </span>
                         </button>
                       </td>
-                      <td className="w-1/6 px-4 py-3 text-sm text-center font-semibold">{entry.totalWins}</td>
-                      <td className="w-1/6 px-4 py-3 text-sm text-center">{entry.totalPlayed}</td>
+                      <td className="px-4 py-3 text-sm text-center">{entry.totalWins}</td>
+                      <td className="px-4 py-3 text-sm text-center">{entry.totalPlayed}</td>
                     </tr>
                   );
                 })}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import './UserProfileModal.css';
 
 interface UserGameStats {
   gameId: string;
@@ -124,62 +125,33 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const isImage = typeof avatarUrl === 'string' && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          width: '100%',
-          maxWidth: '40rem',
-          maxHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-          color: 'black',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="user-profile-backdrop" onClick={onClose}>
+      <div className="user-profile-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
+        <div className="user-profile-header">
           {isImage ? (
             <a
               href={`/ManageDle/profile/${encodeURIComponent(displayName)}`}
               target="_blank"
               rel="noopener noreferrer"
               title="View public profile"
-              style={{ display: 'inline-block' }}
+              className="user-profile-avatar-link"
               onClick={e => e.stopPropagation()}
             >
               <img
                 src={avatarUrl!}
                 alt="Profile"
-                className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
-                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
+                className="user-profile-avatar"
                 title="Profile picture"
               />
             </a>
           ) : (
-            <div className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl text-gray-400">
+            <div className="user-profile-avatar-placeholder">
               No Image
             </div>
           )}
           <div>
-            <h2 className="text-2xl font-bold" style={{ margin: '0.5em' }}>{displayName}</h2>
+            <h2 className="user-profile-name">{displayName}</h2>
           </div>
         </div>
 
@@ -199,32 +171,32 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              <h3 className="font-semibold text-lg mb-4">Game Statistics</h3>
+              <h3 className="user-profile-games-title">Game Statistics</h3>
               {gameStats.map(stat => (
                 <div
                   key={stat.gameId}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50"
+                  className="user-profile-game-item"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{stat.icon}</span>
-                    <span className="font-medium">{stat.gameName}</span>
+                  <div className="user-profile-game-info">
+                    <span className="user-profile-game-icon">{stat.icon}</span>
+                    <span className="user-profile-game-name">{stat.gameName}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="text-gray-600 text-xs">Streak</span>
-                      <span className="font-bold text-base block">{stat.streak}</span>
+                  <div className="user-profile-game-stats">
+                    <div className="user-profile-stat">
+                      <span className="user-profile-stat-label">Streak</span>
+                      <span className="user-profile-stat-value">{stat.streak}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-600 text-xs">Max</span>
-                      <span className="font-bold text-base block">{stat.maxStreak}</span>
+                    <div className="user-profile-stat">
+                      <span className="user-profile-stat-label">Max</span>
+                      <span className="user-profile-stat-value">{stat.maxStreak}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-600 text-xs">Wins</span>
-                      <span className="font-bold text-base block">{stat.wins}</span>
+                    <div className="user-profile-stat">
+                      <span className="user-profile-stat-label">Wins</span>
+                      <span className="user-profile-stat-value">{stat.wins}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-600 text-xs">Plays</span>
-                      <span className="font-bold text-base block">{stat.plays}</span>
+                    <div className="user-profile-stat">
+                      <span className="user-profile-stat-label">Plays</span>
+                      <span className="user-profile-stat-value">{stat.plays}</span>
                     </div>
                   </div>
                 </div>
