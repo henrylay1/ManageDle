@@ -14,7 +14,6 @@ import { authService } from '@/services/authService';
 import { Game } from '@/types/models';
 import './Buttons.css';
 import './Dashboard.css';
-import cursorIcon from './cursor.svg';
 
 // Reusable TooltipWithArrow component
 export function TooltipWithArrow({
