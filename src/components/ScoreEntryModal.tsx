@@ -603,18 +603,31 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         console.error('[ScoreEntryModal] Error normalizing scores before save', e);
       }
 
-      if (existingRecord) {
-        await updateRecord(existingRecord.recordId, recordData);
-      } else {
-        await addRecord(recordData);
-      }
-
-      await loadTodayRecords();
+      // Close modal immediately for better UX (optimistic update)
       onClose();
+      setIsSubmitting(false);
+
+      // Save in background
+      if (existingRecord) {
+        updateRecord(existingRecord.recordId, recordData)
+          .then(() => loadTodayRecords())
+          .catch((error) => {
+            console.error('Error updating record:', error);
+            // Could show a toast notification instead of alert for better UX
+            alert('Failed to update record. Please try again.');
+          });
+      } else {
+        addRecord(recordData)
+          .then(() => loadTodayRecords())
+          .catch((error) => {
+            console.error('Error saving record:', error);
+            alert('Failed to save record. Please try again.');
+          });
+      }
     } catch (error) {
-      console.error('Error saving record:', error);
-      alert('Failed to save record. Please try again.');
-    } finally {
+      // Only validation errors should reach here
+      console.error('Error preparing record:', error);
+      alert('Failed to prepare record. Please check your input.');
       setIsSubmitting(false);
     }
   };

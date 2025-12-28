@@ -14,6 +14,7 @@ import { authService } from '@/services/authService';
 import { Game } from '@/types/models';
 import './Buttons.css';
 import './Dashboard.css';
+import cursorIcon from './cursor.svg';
 
 // Reusable TooltipWithArrow component
 export function TooltipWithArrow({
@@ -108,7 +109,17 @@ function TooltipWithHoverOut({ onHide }: { onHide: () => void }) {
 function Dashboard() {
   const [theme, setTheme] = useState(() => window.localStorage.getItem('theme') || 'dark');
   const [showTicketModal, setShowTicketModal] = useState(false);
-  const { activeGames, games, todayRecords, authUser, isAuthenticated } = useAppStore();
+  const { 
+    activeGames, 
+    games, 
+    todayRecords, 
+    authUser, 
+    isAuthenticated, 
+    savingGames,
+    organizeMode,
+    toggleOrganizeMode,
+    reorderActiveGames,
+  } = useAppStore();
   const [showScoreEntry, setShowScoreEntry] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showRemove, setShowRemove] = useState(false);
@@ -123,6 +134,17 @@ function Dashboard() {
   const [shimmeringGameId, setShimmeringGameId] = useState<string | null>(null);
   const wordleAddBtnRef = useRef<HTMLButtonElement | null>(null);
   const gameCardRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  
+  // Drag and drop state
+  const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
+  const [visualOrder, setVisualOrder] = useState<string[]>([]);
+  const [disableTransitions, setDisableTransitions] = useState(false);
+  const [localBaseOrder, setLocalBaseOrder] = useState<Game[]>(activeGames);
+  const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
+  const [cardsPerRow, setCardsPerRow] = useState<number>(3);
+  
+  // Todo sort state (temporary, not persisted)
+  const [todoSortActive, setTodoSortActive] = useState(false);
   
   // Shared auth form state
   const [authEmail, setAuthEmail] = useState('');
@@ -188,6 +210,179 @@ function Dashboard() {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, gameId: string) => {
+    setDraggedGameId(gameId);
+    // Initialize visual order based on current displayed order
+    const displayed = (organizeMode
+      ? localBaseOrder
+      : todoSortActive
+        ? (() => {
+            const incompleteGames = localBaseOrder.filter(g => !getTodayRecord(g.gameId)?.completed);
+            const completedGames = localBaseOrder.filter(g => getTodayRecord(g.gameId)?.completed);
+            return [...incompleteGames, ...completedGames];
+          })()
+        : localBaseOrder
+    );
+    const currentOrder = displayed.map(g => g.gameId);
+    setVisualOrder(currentOrder);
+    // Measure card size and calculate cards per row for 2D transforms
+    const el = gameCardRefsMap.current.get(gameId);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      setCardSize({ width: rect.width, height: rect.height });
+      
+      // Calculate cards per row based on grid container width
+      const gridEl = el.parentElement;
+      if (gridEl) {
+        const gridWidth = gridEl.clientWidth;
+        const perRow = Math.max(1, Math.floor(gridWidth / rect.width));
+        setCardsPerRow(perRow);
+      }
+    }
+   
+    // Try to use our SVG as the drag image so pointer shows custom icon during drag
+    try {
+      const img = new Image();
+      img.src = cursorIcon;
+      img.onload = () => {
+        try { e.dataTransfer.setDragImage(img, 16, 16); } catch (err) { /* ignore */ }
+      };
+      // fallback: set effect and data immediately
+    } catch (err) {
+      /* ignore */
+    }
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', gameId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, gameId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (!draggedGameId || gameId === draggedGameId || visualOrder.length === 0) return;
+
+    const draggedIndex = visualOrder.indexOf(draggedGameId);
+    const targetIndex = visualOrder.indexOf(gameId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Get target element rect to measure cursor position
+    const targetEl = gameCardRefsMap.current.get(gameId);
+    if (!targetEl) return;
+    const rect = targetEl.getBoundingClientRect();
+    const fractionX = (e.clientX - rect.left) / rect.width;
+    const fractionY = (e.clientY - rect.top) / rect.height;
+
+    const perRow = Math.max(1, cardsPerRow || 1);
+    const sameRow = Math.floor(draggedIndex / perRow) === Math.floor(targetIndex / perRow);
+    const threshold = 0.25; // require 25% into the target card
+
+    let shouldSwap = false;
+    if (sameRow) {
+      if (draggedIndex < targetIndex) {
+        // moving right: cursor must be at least 25% into target from left
+        shouldSwap = fractionX > threshold;
+      } else if (draggedIndex > targetIndex) {
+        // moving left: cursor must be at least 25% into target from right
+        shouldSwap = fractionX < (1 - threshold);
+      }
+    } else {
+      // different rows -> check vertical fraction
+      if (draggedIndex < targetIndex) {
+        // moving down: cursor must be 25% into target from top
+        shouldSwap = fractionY > threshold;
+      } else if (draggedIndex > targetIndex) {
+        // moving up: cursor must be 25% into target from bottom
+        shouldSwap = fractionY < (1 - threshold);
+      }
+    }
+
+    if (shouldSwap) {
+      const newOrder = [...visualOrder];
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedGameId);
+      setVisualOrder(newOrder);
+    }
+  };
+
+  const handleDragLeave = () => {
+    // Don't reset visual order - let it animate smoothly
+  };
+
+  const finalizeReorder = (order?: string[]) => {
+    const finalOrder = order ?? visualOrder.slice();
+    if (!finalOrder || finalOrder.length === 0) {
+      setDraggedGameId(null);
+      setVisualOrder([]);
+      return;
+    }
+
+    // Disable transitions so elements snap immediately
+    setDisableTransitions(true);
+    // Force a reflow so the `transition: none` takes effect immediately
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    void document.body.offsetHeight;
+
+    // Persist the visual order to database
+    // Optimistically update local order so DOM reflects final order immediately
+    const finalGames = finalOrder.map(id => activeGames.find(g => g.gameId === id) || games.find(g => g.gameId === id)).filter((g): g is Game => !!g);
+    if (finalGames.length === finalOrder.length) {
+      setLocalBaseOrder(finalGames);
+    }
+    reorderActiveGames(finalOrder);
+
+    // Clear drag state
+    setDraggedGameId(null);
+    setVisualOrder([]);
+
+    // Re-enable transitions after a short delay
+    setTimeout(() => setDisableTransitions(false), 50);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    finalizeReorder();
+  };
+
+  const handleDragEnd = () => {
+    setDisableTransitions(true);
+    setDraggedGameId(null);
+    setVisualOrder([]);
+    setTimeout(() => setDisableTransitions(false), 50);
+    try { document.body.style.cursor = ''; } catch (err) { }
+  };
+
+  const handleSortByTodo = () => {
+    // Toggle temporary todo sort (incomplete first)
+    // This is not persisted - resets on page reload
+    setTodoSortActive(!todoSortActive);
+  };
+
+  // Reset todo sort when entering organize mode
+  useEffect(() => {
+    if (organizeMode) {
+      setTodoSortActive(false);
+    }
+  }, [organizeMode]);
+
+  // ensure body-level class reflects organize mode for cursor overrides
+  useEffect(() => {
+    try {
+      if (organizeMode) document.body.classList.add('organize-mode-active');
+      else document.body.classList.remove('organize-mode-active');
+    } catch (err) {
+      /* ignore in non-browser env */
+    }
+    return () => { try { document.body.classList.remove('organize-mode-active'); } catch (err) {} };
+  }, [organizeMode]);
+
+  // Keep localBaseOrder in sync with store when not actively dragging
+  useEffect(() => {
+    if (!draggedGameId && visualOrder.length === 0) {
+      setLocalBaseOrder(activeGames);
+    }
+  }, [activeGames, draggedGameId, visualOrder.length]);
+
   const handleRemoveAllFromActive = async () => {
     // Toggle all active games to inactive
     for (const game of activeGames) {
@@ -218,7 +413,16 @@ function Dashboard() {
   }, [theme]);
 
   return (
-    <div className="dashboard" style={{ position: 'relative' }}>
+    <div
+      className="dashboard"
+      style={{ position: 'relative' }}
+      onDragOver={(e) => { if (organizeMode) e.preventDefault(); }}
+      onDrop={(e) => {
+        if (!organizeMode) return;
+        e.preventDefault();
+        finalizeReorder();
+      }}
+    >
       {/* Persistent dashboard header at the very top */}
       <header className="dashboard-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -259,8 +463,29 @@ function Dashboard() {
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {/* Ticket Modal */}
               <TicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
+            {/* Organize Mode Toggle */}
+            {activeGames.length > 1 && (
+              <button
+                className={`btn-secondary ${organizeMode ? 'active' : ''}`}
+                onClick={toggleOrganizeMode}
+                disabled={todoSortActive}
+                title={todoSortActive ? 'Exit todo mode to organize' : organizeMode ? 'Exit organize mode' : 'Drag to reorder games'}
+              >
+                {organizeMode ? '✓ Done' : '↕️ Organize'}
+              </button>
+            )}
+            {/* Todo Sort Button */}
+            {activeGames.length > 1 && !organizeMode && (
+              <button
+                className={`btn-secondary ${todoSortActive ? 'active' : ''}`}
+                onClick={handleSortByTodo}
+                title={todoSortActive ? 'Show custom order' : 'Sort incomplete games first'}
+              >
+                {todoSortActive ? '✓ Todo' : '📋 Todo'}
+              </button>
+            )}
             {/* Remove All from Active Button */}
-            {activeGames.length > 0 && (
+            {activeGames.length > 0 && !organizeMode && (
               <button
                 className="btn-secondary"
                 onClick={handleRemoveAllFromActive}
@@ -328,16 +553,69 @@ function Dashboard() {
             </button>
           </div>
         ) : (
-          <div className="games-grid">
-            {activeGames
-              .slice()
-              .sort((a, b) => {
-                const aCompleted = !!getTodayRecord(a.gameId)?.completed;
-                const bCompleted = !!getTodayRecord(b.gameId)?.completed;
-                if (aCompleted === bCompleted) return 0;
-                return aCompleted ? -1 : 1;
-              })
-              .map(game => (
+          <div
+            className={`games-grid ${organizeMode ? 'organize-mode' : ''}`}
+            onDragOver={(e) => { if (organizeMode) e.preventDefault(); }}
+            onDrop={(e) => {
+              if (!organizeMode) return;
+              e.preventDefault();
+              finalizeReorder();
+            }}
+          >
+            {(() => {
+              // Determine base order for display
+              let baseOrder: Game[];
+              
+              if (organizeMode) {
+                // In organize mode, always use stored order
+                baseOrder = activeGames;
+              } else if (todoSortActive) {
+                // Todo sort: incomplete first, then completed
+                const incompleteGames = activeGames.filter(g => !getTodayRecord(g.gameId)?.completed);
+                const completedGames = activeGames.filter(g => getTodayRecord(g.gameId)?.completed);
+                baseOrder = [...incompleteGames, ...completedGames];
+              } else {
+                baseOrder = activeGames;
+              }
+              
+              // Always render in base order - use transforms to show visual changes during drag
+              return baseOrder.map((game, index) => {
+                // Calculate transform offset if card has moved during drag
+                let transformStyle: React.CSSProperties = { 
+                  order: index,
+                  // Only disable transitions after drop (during finalization)
+                  transition: disableTransitions ? 'none' : undefined,
+                };
+                
+                if (draggedGameId && visualOrder.length > 0) {
+                  const baseOrderIds = baseOrder.map(g => g.gameId);
+                  const originalIndex = baseOrderIds.indexOf(game.gameId);
+                  const visualIndex = visualOrder.indexOf(game.gameId);
+                  
+                  if (originalIndex !== -1 && visualIndex !== -1 && originalIndex !== visualIndex) {
+                    // Calculate row and column for both positions
+                    const origRow = Math.floor(originalIndex / cardsPerRow);
+                    const origCol = originalIndex % cardsPerRow;
+                    const visRow = Math.floor(visualIndex / cardsPerRow);
+                    const visCol = visualIndex % cardsPerRow;
+                    
+                    // Calculate X and Y offsets
+                    const stepX = cardSize?.width ?? 340;
+                    const stepY = cardSize?.height ?? 200;
+                    const deltaX = (visCol - origCol) * stepX;
+                    const deltaY = (visRow - origRow) * stepY;
+                    
+                    if (game.gameId === draggedGameId) {
+                      // Dragged card: combine scale and translate
+                      transformStyle.transform = `scale(0.98) translate(${deltaX}px, ${deltaY}px)`;
+                    } else {
+                      // Non-dragged card that moved: just translate
+                      transformStyle.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    }
+                  }
+                }
+
+                return (
                 <div
                   key={game.gameId}
                   ref={(el) => {
@@ -345,7 +623,14 @@ function Dashboard() {
                       gameCardRefsMap.current.set(game.gameId, el);
                     }
                   }}
-                  className={shimmeringGameId === game.gameId ? 'shimmer-effect' : ''}
+                  className={`game-card-wrapper ${shimmeringGameId === game.gameId ? 'shimmer-effect' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
+                  style={transformStyle}
+                  draggable={organizeMode}
+                  onDragStart={organizeMode ? (e) => handleDragStart(e, game.gameId) : undefined}
+                  onDragOver={organizeMode ? (e) => handleDragOver(e, game.gameId) : undefined}
+                  onDragLeave={organizeMode ? handleDragLeave : undefined}
+                  onDrop={organizeMode ? (e) => handleDrop(e) : undefined}
+                  onDragEnd={organizeMode ? handleDragEnd : undefined}
                 >
                   <GameCard
                     game={game}
@@ -354,13 +639,16 @@ function Dashboard() {
                     onLogScore={() => handleLogScore(game)}
                     onViewStats={() => handleViewStats(game)}
                     onRemove={() => handleRemoveGame(game)}
+                    isSaving={savingGames.has(game.gameId)}
                     onReset={async () => {
                       // Refresh today's records when a reset occurs
                     await useAppStore.getState().loadTodayRecords();
                   }}
                   />
                 </div>
-              ))}
+              );
+              });
+            })()}
           </div>
         )}
       </section>

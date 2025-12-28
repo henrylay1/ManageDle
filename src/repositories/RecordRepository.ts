@@ -74,13 +74,6 @@ export class RecordRepository {
   async add(record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>, game?: Game): Promise<GameRecord> {
     const records = await this.getAll();
     
-    console.log('[RecordRepository.add] Game parameter:', game ? {
-      gameId: game.gameId,
-      displayName: game.displayName,
-      isAsynchronous: game.isAsynchronous,
-      resetTime: game.resetTime
-    } : 'NOT PROVIDED');
-    
     // Calculate streaks for this new record
     let playstreak = 1;
     let winstreak = 1;
@@ -95,7 +88,6 @@ export class RecordRepository {
       currentPuzzleDay = getPuzzleDay(currentTimestamp, game);
     } else {
       // Fallback to UTC date if game not provided
-      console.warn('[RecordRepository.add] Game not provided, using UTC fallback');
       currentPuzzleDay = currentTimestamp.slice(0, 10);
     }
     
@@ -105,22 +97,9 @@ export class RecordRepository {
       .filter(r => {
         if (!r.createdAt) return false;
         const recordPuzzleDay = game ? getPuzzleDay(r.createdAt, game) : r.createdAt.slice(0, 10);
-        console.log('[RecordRepository] Checking record:', {
-          timestamp: r.createdAt,
-          puzzleDay: recordPuzzleDay,
-          currentPuzzleDay,
-          isEarlier: recordPuzzleDay < currentPuzzleDay
-        });
         return recordPuzzleDay < currentPuzzleDay;
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
-    
-    console.log('[RecordRepository] Current puzzle day:', currentPuzzleDay);
-    console.log('[RecordRepository] Found previous record:', prevRecord ? {
-      timestamp: prevRecord.createdAt,
-      puzzleDay: game ? getPuzzleDay(prevRecord.createdAt, game) : prevRecord.createdAt.slice(0, 10),
-      metadata: prevRecord.metadata
-    } : 'none');
     
     if (prevRecord?.metadata) {
       maxWinstreak = prevRecord.metadata.maxWinstreak ?? 1;
@@ -134,14 +113,6 @@ export class RecordRepository {
       const prevUTC = Date.UTC(py, (pm || 1) - 1, pd || 1);
       const currentUTC = Date.UTC(cy, (cm || 1) - 1, cd || 1);
       const daysDiff = Math.round((currentUTC - prevUTC) / (1000 * 60 * 60 * 24));
-      
-      console.log('[RecordRepository] Streak calculation:', {
-        prevPuzzleDay,
-        currentPuzzleDay,
-        daysDiff,
-        prevStreak: prevRecord.metadata.playstreak,
-        prevWinstreak: prevRecord.metadata.winstreak
-      });
       
       if (daysDiff === 1) {
         // Consecutive day - increment play streak

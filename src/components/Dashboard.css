@@ -19,6 +19,7 @@
   background: var(--surface-secondary);
   color: var(--accent);
 }
+
 /* Dashboard Styles - Button styles moved to Buttons.css */
 
 .dashboard {
@@ -71,7 +72,6 @@
   font-style: italic;
 }
 
-
 .empty-state {
   text-align: center;
   padding: 3rem;
@@ -88,12 +88,66 @@
 }
 
 .games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
   margin: 1.5rem;
+  align-content: flex-start;
 }
 
+/* Organize mode styles */
+.games-grid.organize-mode {
+  background: rgba(102, 126, 234, 0.05);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0.5rem 1.5rem 1.5rem;
+}
+
+.game-card-wrapper {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              opacity 0.2s ease-out;
+  position: relative;
+  flex: 0 1 calc(33.333%);
+  min-width: 300px;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 0.75rem;
+}
+
+.game-card-wrapper:hover {
+  cursor: pointer;
+}
+
+.organize-mode .game-card-wrapper:hover {
+  cursor: grab;
+}
+
+.game-card-wrapper.dragging {
+  opacity: 0.5;
+  z-index: 1000;
+  pointer-events: auto;
+  cursor: grabbing;
+}
+
+@media (max-width: 1200px) {
+  .game-card-wrapper {
+    flex: 0 1 calc(50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .game-card-wrapper {
+    flex: 0 1 100%;
+  }
+}
+
+/* Organize button active state */
+.btn-secondary.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
 
 .category-section {
   margin-bottom: 1.5rem;
@@ -117,12 +171,9 @@
   border-bottom: 2px solid var(--border);
 }
 
-
 .category-title:hover {
   background: var(--surface-menu);
 }
-
-
 
 .category-title.expanded {
   border-bottom-left-radius: 0;
@@ -171,7 +222,7 @@
 .game-list-item:hover {
   background: #5a5c7a;
 }
-/* Game card and menu backgrounds */
+
 .game-card, .menu, .dropdown-menu, .account-menu {
   background: var(--surface-menu) !important;
   color: var(--text-primary);
@@ -207,7 +258,6 @@
   transform: scale(1.05);
 }
 
-
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -224,10 +274,12 @@
     align-items: stretch;
     padding: 1rem 0.5rem;
   }
+  
   .dashboard-title {
     align-items: flex-start !important;
     text-align: left;
   }
+  
   .dashboard-header-actions {
     position: static;
     justify-content: flex-start;
@@ -235,6 +287,7 @@
     width: 100%;
   }
 }
+
 /* Shimmer effect for game cards */
 @keyframes shimmer {
   0% {

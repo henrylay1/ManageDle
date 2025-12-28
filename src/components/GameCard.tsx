@@ -74,9 +74,10 @@ interface GameCardProps {
   onViewStats: () => void;
   onRemove?: () => void;
   onReset?: () => void;
+  isSaving?: boolean;
 }
 
-function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset }: GameCardProps) {
+function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset, isSaving }: GameCardProps) {
   const isCompleted = record?.completed || false;
   const hasError = record?.metadata?.hasInvalidShareText || false;
   const isFailed = record?.failed || false;
@@ -137,7 +138,12 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
       </div>
 
       <div className="game-card-body">
-        {record ? (
+        {isSaving ? (
+          <div className="game-card-loading">
+            <div className="loading-spinner"></div>
+            <span>Saving...</span>
+          </div>
+        ) : record ? (
           <>
             <div className="game-card-score">
               {/* Display all scores from record.scores */}

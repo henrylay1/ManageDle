@@ -147,14 +147,6 @@ export function getPuzzleDay(timestamp: string, game: Game): string {
   const recordTime = new Date(timestamp);
   const [resetHour, resetMinute] = game.resetTime.split(':').map(Number);
 
-  console.log('[getPuzzleDay] Input:', { 
-    timestamp, 
-    gameId: game.gameId, 
-    isAsync: game.isAsynchronous, 
-    resetTime: game.resetTime,
-    dateObject: recordTime.toString()
-  });
-
   let year: number, month: number, day: number, hour: number, minute: number;
 
   if (game.isAsynchronous) {
@@ -164,7 +156,6 @@ export function getPuzzleDay(timestamp: string, game: Game): string {
     day = recordTime.getDate();
     hour = recordTime.getHours();
     minute = recordTime.getMinutes();
-    console.log('[getPuzzleDay] Using local time:', { year, month, day, hour, minute });
   } else {
     // Use UTC
     year = recordTime.getUTCFullYear();
@@ -172,12 +163,10 @@ export function getPuzzleDay(timestamp: string, game: Game): string {
     day = recordTime.getUTCDate();
     hour = recordTime.getUTCHours();
     minute = recordTime.getUTCMinutes();
-    console.log('[getPuzzleDay] Using UTC time:', { year, month, day, hour, minute });
   }
 
   // If current time is before reset time, puzzle day is previous day
   if (hour < resetHour || (hour === resetHour && minute < resetMinute)) {
-    console.log('[getPuzzleDay] Before reset time, using previous day');
     const prevDay = new Date(year, month, day - 1);
     year = prevDay.getFullYear();
     month = prevDay.getMonth();
@@ -188,6 +177,5 @@ export function getPuzzleDay(timestamp: string, game: Game): string {
   const mm = String(month + 1).padStart(2, '0');
   const dd = String(day).padStart(2, '0');
   const result = `${year}-${mm}-${dd}`;
-  console.log('[getPuzzleDay] Result:', result);
   return result;
 }

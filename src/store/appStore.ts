@@ -147,6 +147,8 @@ interface AppState {
   
   // Loading states
   isLoading: boolean;
+  savingGames: Set<string>; // Track which games are currently being saved
+  organizeMode: boolean; // Whether user can drag-and-drop to reorder games
   
   // Actions
   initialize: () => Promise<void>;
@@ -162,6 +164,8 @@ interface AppState {
   updateGame: (gameId: string, updates: Partial<Game>) => Promise<void>;
   deleteGame: (gameId: string) => Promise<void>;
   toggleGameActive: (gameId: string) => Promise<void>;
+  reorderActiveGames: (orderedGameIds: string[]) => Promise<void>;
+  toggleOrganizeMode: () => void;
   
   // Record actions
   addRecord: (record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -178,6 +182,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   authUser: null,
   isAuthenticated: false,
+  savingGames: new Set(),
+  organizeMode: false,
   games: [],
   activeGames: [],
   todayRecords: [],
@@ -202,7 +208,26 @@ export const useAppStore = create<AppState>((set, get) => ({
           
           // Load games from database (global)
           const games = await gameRepo.getAll();
-          const activeGames = games.filter(g => g.isActive);
+          
+          // Get active_games order from user_profile_config
+          const { data: configData } = await supabase
+            .from('user_profile_config')
+            .select('active_games')
+            .eq('user_id', authUser.id)
+            .single();
+          
+          const activeGameIds = Array.isArray(configData?.active_games) ? configData.active_games : [];
+          
+          // Sort active games by the stored order
+          const activeGames = activeGameIds
+            .map((id: string) => games.find(g => g.gameId === id))
+            .filter((g): g is Game => g !== undefined && g.isActive);
+          
+          // Add any active games not in the order list at the end
+          const activeGamesInOrder = new Set(activeGameIds);
+          const additionalActiveGames = games.filter(g => g.isActive && !activeGamesInOrder.has(g.gameId));
+          activeGames.push(...additionalActiveGames);
+          
           const todayRecords = await recordRepo.getTodayRecords(games);
           
           set({
@@ -229,7 +254,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Load games from database (global)
       let games = await gameRepo.getAll();
       
-      // Try to load active game IDs from localStorage
+      // Try to load active game IDs from localStorage (preserves order)
       const storedActiveGames = window.localStorage.getItem('managedle:active_games');
       let activeGameIds: string[] = [];
       
@@ -247,7 +272,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         isActive: activeGameIds.includes(g.gameId)
       }));
       
-      const activeGames = games.filter(g => g.isActive);
+      // Sort active games by the stored order
+      const activeGames = activeGameIds
+        .map(id => games.find(g => g.gameId === id))
+        .filter((g): g is Game => g !== undefined && g.isActive);
+      
+      // Add any active games not in the order list at the end
+      const activeGamesInOrder = new Set(activeGameIds);
+      const additionalActiveGames = games.filter(g => g.isActive && !activeGamesInOrder.has(g.gameId));
+      activeGames.push(...additionalActiveGames);
 
       // Load today's records from localStorage
       const todayRecords = await recordRepo.getTodayRecords(games);
@@ -573,55 +606,112 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  addRecord: async (record) => {
-    const { user, isAuthenticated, authUser, games } = get();
-    if (!user) return;
-    
-    const userId = isAuthenticated && authUser ? authUser.id : user.localId;
-    const recordRepo = new RecordRepository(currentStorage, userId);
-    
-    // Find the game for this record to enable timezone-aware streak calculation
-    console.log('[appStore.addRecord] Looking for game:', {
-      recordGameId: record.gameId,
-      availableGames: games.map(g => ({ gameId: g.gameId, displayName: g.displayName }))
-    });
-    const game = games.find(g => g.gameId === record.gameId);
-    console.log('[appStore.addRecord] Found game:', game ? {
-      gameId: game.gameId,
-      displayName: game.displayName,
-      isAsynchronous: game.isAsynchronous,
-      resetTime: game.resetTime
-    } : 'NOT FOUND');
-    await recordRepo.add(record, game);
-    
-    // Reload today's records
-    const todayRecords = await recordRepo.getTodayRecords(games);
-    set({ todayRecords });
-    
-    // Invalidate stats cache for this game
-    const statsCache = new Map(get().statsCache);
-    statsCache.delete(record.gameId);
-    set({ statsCache });
+  toggleOrganizeMode: () => {
+    set({ organizeMode: !get().organizeMode });
   },
 
-  updateRecord: async (recordId, updates) => {
-    const { user, isAuthenticated, authUser } = get();
+  reorderActiveGames: async (orderedGameIds: string[]) => {
+    const { games, authUser, isAuthenticated } = get();
+    
+    // Reorder activeGames based on orderedGameIds
+    const reorderedActiveGames = orderedGameIds
+      .map(id => games.find(g => g.gameId === id))
+      .filter((g): g is Game => g !== undefined && g.isActive);
+    
+    // Optimistic update
+    set({ activeGames: reorderedActiveGames });
+    
+    try {
+      if (isAuthenticated && authUser) {
+        // Update user_profile_config with new order
+        await supabase
+          .from('user_profile_config')
+          .update({ active_games: orderedGameIds })
+          .eq('user_id', authUser.id);
+      } else {
+        // Guest user: update localStorage
+        window.localStorage.setItem('managedle:active_games', JSON.stringify(orderedGameIds));
+      }
+    } catch (error) {
+      console.error('Failed to save game order:', error);
+      // Revert on error
+      const refreshedGames = await gameRepo.getAll();
+      set({ activeGames: refreshedGames.filter(g => g.isActive) });
+    }
+  },
+
+  addRecord: async (record) => {
+    const { user, isAuthenticated, authUser, games, savingGames } = get();
     if (!user) return;
     
-    const userId = isAuthenticated && authUser ? authUser.id : user.localId;
-    const recordRepo = new RecordRepository(currentStorage, userId);
-    const updatedRecord = await recordRepo.update(recordId, updates);
+    // Mark game as saving
+    const newSavingGames = new Set(savingGames);
+    newSavingGames.add(record.gameId);
+    set({ savingGames: newSavingGames });
     
-    if (updatedRecord) {
-      // Reload today's records
-      const games = get().games;
-      const todayRecords = await recordRepo.getTodayRecords(games);
-      set({ todayRecords });
+    try {
+      const userId = isAuthenticated && authUser ? authUser.id : user.localId;
+      const recordRepo = new RecordRepository(currentStorage, userId);
+      
+      // Find the game for this record to enable timezone-aware streak calculation
+      const game = games.find(g => g.gameId === record.gameId);
+      await recordRepo.add(record, game);
+      
+      // No need to reload here - caller will do it if needed
+      // This eliminates the double-fetch issue
       
       // Invalidate stats cache for this game
       const statsCache = new Map(get().statsCache);
-      statsCache.delete(updatedRecord.gameId);
+      statsCache.delete(record.gameId);
       set({ statsCache });
+    } finally {
+      // Remove game from saving set
+      const updatedSavingGames = new Set(get().savingGames);
+      updatedSavingGames.delete(record.gameId);
+      set({ savingGames: updatedSavingGames });
+    }
+  },
+
+  updateRecord: async (recordId, updates) => {
+    const { user, isAuthenticated, authUser, savingGames } = get();
+    if (!user) return;
+    
+    const userId = isAuthenticated && authUser ? authUser.id : user.localId;
+    const recordRepo = new RecordRepository(currentStorage, userId);
+    
+    // Get the record to know which game we're updating
+    const allRecords = await recordRepo.getAll();
+    const existingRecord = allRecords.find(r => r.recordId === recordId);
+    const gameId = updates.gameId || existingRecord?.gameId;
+    
+    // Mark game as saving
+    if (gameId) {
+      const newSavingGames = new Set(savingGames);
+      newSavingGames.add(gameId);
+      set({ savingGames: newSavingGames });
+    }
+    
+    try {
+      const updatedRecord = await recordRepo.update(recordId, updates);
+      
+      if (updatedRecord) {
+        // Reload today's records
+        const games = get().games;
+        const todayRecords = await recordRepo.getTodayRecords(games);
+        set({ todayRecords });
+        
+        // Invalidate stats cache for this game
+        const statsCache = new Map(get().statsCache);
+        statsCache.delete(updatedRecord.gameId);
+        set({ statsCache });
+      }
+    } finally {
+      // Remove game from saving set
+      if (gameId) {
+        const updatedSavingGames = new Set(get().savingGames);
+        updatedSavingGames.delete(gameId);
+        set({ savingGames: updatedSavingGames });
+      }
     }
   },
 
