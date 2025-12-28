@@ -241,16 +241,6 @@ function Dashboard() {
     }
    
     // Try to use our SVG as the drag image so pointer shows custom icon during drag
-    try {
-      const img = new Image();
-      img.src = cursorIcon;
-      img.onload = () => {
-        try { e.dataTransfer.setDragImage(img, 16, 16); } catch (err) { /* ignore */ }
-      };
-      // fallback: set effect and data immediately
-    } catch (err) {
-      /* ignore */
-    }
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', gameId);
   };
