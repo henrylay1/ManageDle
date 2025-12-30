@@ -34,7 +34,6 @@ export class LeaderboardService {
           user_id,
           game_id,
           scores,
-          completed,
           failed,
           created_at,
           users!inner (
@@ -81,7 +80,7 @@ export class LeaderboardService {
         const userStats = userStatsMap.get(userId)!;
         userStats.totalPlayed++;
         
-        if (record.completed && !record.failed) {
+        if (!record.failed) {
           userStats.totalWins++;
           if (record.scores !== null) {
             userStats.scores.push(record.scores);

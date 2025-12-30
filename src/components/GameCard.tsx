@@ -78,10 +78,12 @@ interface GameCardProps {
 }
 
 function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset, isSaving }: GameCardProps) {
-  const isCompleted = record?.completed || false;
+  // Determine played/win state: existence of `record` means played; wins are `!failed`.
+  const isPlayed = !!record;
+  // shareTexts unused here — derive from record.metadata only when needed
   const hasError = record?.metadata?.hasInvalidShareText || false;
   const isFailed = record?.failed || false;
-  const isSuccess = isCompleted && !hasError && !isFailed;
+  const isSuccess = isPlayed && !hasError && !isFailed; // played and not failed or error
 
 
   // Timer state for live countdown and reset detection
@@ -105,7 +107,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
   const timeUntilReset = formatTimeUntilReset(game);
 
   return (
-    <div className={`game-card ${hasError ? 'error' : ''} ${isCompleted && !hasError ? 'completed' : ''}`}>
+    <div className={`game-card ${hasError ? 'error' : ''} ${isPlayed ? 'completed' : ''}`}>
       <div className="game-card-header">
         <span className="game-card-icon">{game.icon}</span>
         <div className="game-card-title">
@@ -117,7 +119,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
             <span className="warning-badge" title="Invalid share text format">⚠️</span>
           ) : isSuccess ? (
             <span className="star-badge" title="Completed successfully!">⭐</span>
-          ) : isCompleted ? (
+          ) : isPlayed ? (
             <span className="completion-badge">✓</span>
           ) : null}
           {onRemove && (

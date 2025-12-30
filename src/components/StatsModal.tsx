@@ -117,7 +117,14 @@ function StatsModal({ game, onClose }: StatsModalProps) {
                   <h3>Score Distribution</h3>
                   <div className="score-distribution">
                     {Object.entries(stats.scoreDistribution)
-                      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                      .sort(([a], [b]) => {
+                        const val = (s: string) => {
+                          if (s === 'X') return Number.POSITIVE_INFINITY;
+                          const n = parseFloat(s as string);
+                          return isNaN(n) ? Number.POSITIVE_INFINITY : n;
+                        };
+                        return val(a) - val(b);
+                      })
                       .map(([score, count]) => (
                         <div key={score} className="distribution-row">
                           <div className="distribution-label">{score}</div>

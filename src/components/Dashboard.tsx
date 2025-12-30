@@ -118,6 +118,8 @@ function Dashboard() {
     organizeMode,
     toggleOrganizeMode,
     reorderActiveGames,
+    newGameIds,
+    clearNewGame,
   } = useAppStore();
   const [showScoreEntry, setShowScoreEntry] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -217,8 +219,8 @@ function Dashboard() {
       ? localBaseOrder
       : todoSortActive
         ? (() => {
-            const incompleteGames = localBaseOrder.filter(g => !getTodayRecord(g.gameId)?.completed);
-            const completedGames = localBaseOrder.filter(g => getTodayRecord(g.gameId)?.completed);
+            const incompleteGames = localBaseOrder.filter(g => !getTodayRecord(g.gameId));
+            const completedGames = localBaseOrder.filter(g => !!getTodayRecord(g.gameId));
             return [...incompleteGames, ...completedGames];
           })()
         : localBaseOrder
@@ -354,17 +356,6 @@ function Dashboard() {
     }
   }, [organizeMode]);
 
-  // ensure body-level class reflects organize mode for cursor overrides
-  useEffect(() => {
-    try {
-      if (organizeMode) document.body.classList.add('organize-mode-active');
-      else document.body.classList.remove('organize-mode-active');
-    } catch (err) {
-      /* ignore in non-browser env */
-    }
-    return () => { try { document.body.classList.remove('organize-mode-active'); } catch (err) {} };
-  }, [organizeMode]);
-
   // Keep localBaseOrder in sync with store when not actively dragging
   useEffect(() => {
     if (!draggedGameId && visualOrder.length === 0) {
@@ -413,11 +404,7 @@ function Dashboard() {
       }}
     >
       {/* Persistent dashboard header at the very top */}
-      <header className="dashboard-header" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1rem 2rem',
-        top: 0, zIndex: 100
-      }}>
+      <header className="dashboard-header">
         <div className="dashboard-title" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '2rem' }}>🎮</span>
@@ -425,7 +412,7 @@ function Dashboard() {
           </div>
           <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #888)' }}>Your daily puzzle hub</span>
         </div>
-        <div className="dashboard-header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center', position: 'absolute', right: '2rem' }}>
+        <div className="dashboard-header-actions">
           {/* Theme toggle icon */}
           <button
             className="btn-icon btn-theme-toggle"
@@ -560,8 +547,8 @@ function Dashboard() {
                 baseOrder = activeGames;
               } else if (todoSortActive) {
                 // Todo sort: incomplete first, then completed
-                const incompleteGames = activeGames.filter(g => !getTodayRecord(g.gameId)?.completed);
-                const completedGames = activeGames.filter(g => getTodayRecord(g.gameId)?.completed);
+                const incompleteGames = activeGames.filter(g => !getTodayRecord(g.gameId));
+                const completedGames = activeGames.filter(g => !!getTodayRecord(g.gameId));
                 baseOrder = [...incompleteGames, ...completedGames];
               } else {
                 baseOrder = activeGames;
@@ -612,7 +599,7 @@ function Dashboard() {
                       gameCardRefsMap.current.set(game.gameId, el);
                     }
                   }}
-                  className={`game-card-wrapper ${shimmeringGameId === game.gameId ? 'shimmer-effect' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
+                  className={`game-card-wrapper ${shimmeringGameId === game.gameId ? 'shimmer-effect' : ''} ${newGameIds?.has(game.gameId) ? 'new' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
                   style={transformStyle}
                   draggable={organizeMode}
                   onDragStart={organizeMode ? (e) => handleDragStart(e, game.gameId) : undefined}
@@ -620,6 +607,7 @@ function Dashboard() {
                   onDragLeave={organizeMode ? handleDragLeave : undefined}
                   onDrop={organizeMode ? (e) => handleDrop(e) : undefined}
                   onDragEnd={organizeMode ? handleDragEnd : undefined}
+                  onMouseEnter={() => { if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId); }}
                 >
                   <GameCard
                     game={game}

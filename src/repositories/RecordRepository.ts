@@ -118,11 +118,11 @@ export class RecordRepository {
         // Consecutive day - increment play streak
         playstreak = (prevRecord.metadata.playstreak ?? 1) + 1;
         
-        // Win streak: only increment if current record is a win
-        if (record.completed && !record.failed) {
-          // Check if previous was also a win
-          if (prevRecord.completed && !prevRecord.failed) {
-            winstreak = (prevRecord.metadata.winstreak ?? 1) + 1;
+        // Win streak: only increment if current record is a win (!failed)
+        if (!record.failed) {
+          // Check if previous was also a win (!failed)
+          if (!prevRecord.failed) {
+            winstreak = (prevRecord.metadata?.winstreak ?? 1) + 1;
           } else {
             winstreak = 1; // Previous was not a win, reset to 1
           }
@@ -132,8 +132,8 @@ export class RecordRepository {
       } else {
         // Missed day or same day - reset play streak to 1
         playstreak = 1;
-        // Win streak: set to 1 if current is a win, otherwise 0
-        winstreak = (record.completed && !record.failed) ? 1 : 0;
+        // Win streak: set to 1 if current is a win (!failed), otherwise 0
+        winstreak = !record.failed ? 1 : 0;
       }
       
       // Update max win streak if current win streak is higher
@@ -142,8 +142,8 @@ export class RecordRepository {
       }
     } else {
       // First record for this game
-      // Win streak: 1 if win, 0 if loss
-      winstreak = (record.completed && !record.failed) ? 1 : 0;
+      // Win streak: 1 if win (!failed), 0 if loss
+      winstreak = !record.failed ? 1 : 0;
       maxWinstreak = winstreak;
     }
     

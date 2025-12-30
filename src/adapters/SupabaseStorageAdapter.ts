@@ -157,12 +157,18 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
     // Upsert only the provided records (single or multiple), do not touch others
     if (records.length > 0) {
       for (const record of records) {
+        // Defensive: strip any legacy top-level `completed` flag that may exist
+        // on incoming records (older versions persisted this). Supabase will
+        // reject unknown top-level columns if they are not present in the
+        // remote schema cache, so remove it before building the db payload.
+        const incoming = { ...(record as any) };
+        if ('completed' in incoming) delete incoming.completed;
         // Extract share texts as JSON object with puzzle names as keys (excluding SUMMARY)
         let shareTextJson: Record<string, string> | null = null;
-        let cleanedMetadata = record.metadata ? { ...record.metadata } : null;
+        let cleanedMetadata = incoming.metadata ? { ...incoming.metadata } : null;
         if (cleanedMetadata && Array.isArray(cleanedMetadata.shareTexts) && cleanedMetadata.shareTexts.length > 0) {
           shareTextJson = {};
-          cleanedMetadata.shareTexts.forEach((entry) => {
+          cleanedMetadata.shareTexts.forEach((entry: any) => {
             // Include all share texts, including SUMMARY
             if (entry.shareText) {
               shareTextJson![entry.name] = entry.shareText;
@@ -172,18 +178,18 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
           if (Object.keys(shareTextJson).length === 0) {
             shareTextJson = null;
           }
-          // Remove shareText, internal `scores`, and maxAttempts from each entry in metadata
-          cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }) => rest);
+          // Remove shareText, internal `scores`, `maxAttempts`, and legacy `completed` from each entry in metadata
+          cleanedMetadata.shareTexts = cleanedMetadata.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }: any) => rest);
         }
         // Build dbRecord, omitting share_text if shareTextJson is null
         const dbRecord: any = {
-          record_id: record.recordId,
+          record_id: incoming.recordId,
           user_id: this.userId,
-          game_id: record.gameId,
-          created_at: record.createdAt,
-          scores: record.scores ?? null,
-          completed: record.completed,
-          failed: record.failed,
+          game_id: incoming.gameId,
+          created_at: incoming.createdAt,
+          scores: incoming.scores ?? null,
+          // NOTE: `completed` column removed - presence of a record indicates it was played
+          failed: incoming.failed,
           metadata: cleanedMetadata && Object.keys(cleanedMetadata).length > 0 ? cleanedMetadata : null,
         };
         if (shareTextJson !== null) {
@@ -252,7 +258,7 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
       localId: this.userId,
       userId: this.userId,
       scores: dbRecord.scores ?? undefined,
-      completed: dbRecord.completed,
+      // completed removed from DB mapping
       failed: dbRecord.failed,
       metadata: metadata,
       createdAt: dbRecord.created_at,

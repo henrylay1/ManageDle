@@ -46,7 +46,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       // Fetch user's game records
       const { data: recordsData, error: recordsError } = await supabase
         .from('game_records')
-        .select('game_id, completed, failed, metadata')
+        .select('game_id, failed, metadata')
         .eq('user_id', userId);
 
       if (recordsError) {
@@ -81,7 +81,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
         const stat = statsMap.get(record.game_id)!;
         stat.plays++;
-        if (record.completed && !record.failed) {
+        if (!record.failed) {
           stat.wins++;
         }
       });

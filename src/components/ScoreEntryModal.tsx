@@ -62,7 +62,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       return Object.keys(game.scoreTypes).map(puzzleName => ({
         name: puzzleName,
         shareText: '',
-        completed: false,
         failed: false,
       }));
     }
@@ -84,6 +83,14 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     }
     return '';
   });
+
+  // Determine whether a share-text entry should be considered "completed".
+  // We derive this from presence of a shareText, parsed scores, or an explicit failure flag.
+  const isEntryComplete = (st: ShareTextEntry) => {
+    const hasShareText = !!st.shareText && st.shareText.trim().length > 0;
+    const hasScores = !!(st as any).scores && Object.keys((st as any).scores).some(k => Object.keys((st as any).scores[k] || {}).length > 0);
+    return st.failed || hasShareText || hasScores;
+  };
 
   // Auto-focus the first textarea when modal opens
   useEffect(() => {
@@ -128,7 +135,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           return {
             name: modeName,
             shareText: '',
-            completed: score !== undefined,
             failed: false,
             scores: score ? { [modeName]: score } : undefined,
             puzzleNumber: loldleParsed.puzzleNumber,
@@ -159,7 +165,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           return {
             name: modeName,
             shareText: '',
-            completed: score !== undefined,
             failed: false,
             scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
             puzzleNumber: pokedleParsed.puzzleNumber,
@@ -190,7 +195,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
           return {
             name: modeName,
             shareText: '',
-            completed: score !== undefined,
             failed: hasPuzzle && score === undefined,
             scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
             maxAttempts: getMaxFromScoreTypes(game, modeName, 'attempts'),
@@ -235,7 +239,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               return {
                 name: modeName,
                 shareText: '',
-                completed: score !== undefined,
                 failed: false,
                 scores: score ? { [modeName]: score } : undefined,
                 puzzleNumber: loldleParsed.puzzleNumber,
@@ -268,7 +271,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               return {
                 name: modeName,
                 shareText: '',
-                completed: score !== undefined,
                 failed: false,
                 scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
                 puzzleNumber: pokedleParsed.puzzleNumber,
@@ -301,7 +303,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
               return {
                 name: modeName,
                 shareText: '',
-                completed: score !== undefined,
                 failed: hasPuzzle && score === undefined,
                 scores: score !== undefined ? { [modeName]: { attempts: score } } : undefined,
                 maxAttempts: getMaxFromScoreTypes(game, modeName, 'attempts'),
@@ -324,7 +325,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
         // Standard game record parsing
         const parsed = autoFillFromShareText(text, game.displayName);
         if (parsed && !('error' in parsed)) {
-          updated[index].completed = parsed.completed;
           updated[index].failed = parsed.failed;
           
           // Parse full data and store all parsed fields for future use (no re-parsing in GameCard)
@@ -403,7 +403,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
     setShareTexts([...shareTexts, {
       name: `Subtask ${shareTexts.length + 1}`,
       shareText: '',
-      completed: false,
       failed: false,
     }]);
   };
@@ -428,8 +427,8 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       }
       // Empty share text (no summary)
       if (!st.shareText || st.shareText.trim().length === 0) return true;
-      // Not completed (parsing failed)
-      if (!st.completed) return true;
+      // Not completed (parsing failed) -> require shareText, failed, or scores
+      if (!isEntryComplete(st)) return true;
       return false;
     });
 
@@ -446,14 +445,8 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
 
     try {
       // Calculate overall completion status
-      const allCompleted = shareTexts.every(st => st.completed);
-      const anyCompleted = shareTexts.some(st => st.completed);
+      const anyCompleted = shareTexts.some(st => isEntryComplete(st));
       const anyFailed = shareTexts.some(st => st.failed);
-      
-      // For Gamedle: consider complete when all subpuzzles have shareText (success or fail)
-      const allGamedleComplete = game.displayName === 'Gamedle' && shareTexts.length > 1
-        ? shareTexts.every(st => st.completed || st.failed || (st.shareText && st.shareText.length > 0))
-        : false;
 
       // Build scores object from ShareTextEntries
       // For single-puzzle games: use the first entry's scores
@@ -562,7 +555,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       const recordData = {
         gameId: game.gameId,
         date: new Date().toISOString(), // Store full timestamp for puzzle period tracking
-        completed: shareTexts.length > 1 ? (allGamedleComplete || allCompleted) : shareTexts[0].completed,
         failed: shareTexts.length > 1 ? (anyCompleted && anyFailed) : shareTexts[0].failed,
         scores: recordScores,
         metadata: {
@@ -571,7 +563,6 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
             ...(summaryText.trim() ? [{
               name: 'SUMMARY',
               shareText: summaryText,
-              completed: false,
               failed: false,
             }] : []),
             ...shareTexts,
@@ -763,7 +754,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                       <label className="checkbox-label">
                         <input
                           type="checkbox"
-                          checked={entry.completed}
+                          checked={isEntryComplete(entry)}
                           disabled={true}
                           tabIndex={-1}
                           style={{ pointerEvents: 'none' }}
@@ -771,7 +762,7 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
                         <span>Completed</span>
                       </label>
 
-                      {entry.completed && game.isFailable && (
+                      {isEntryComplete(entry) && game.isFailable && (
                         <label className="checkbox-label">
                           <input
                             type="checkbox"

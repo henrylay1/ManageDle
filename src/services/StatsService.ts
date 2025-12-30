@@ -18,7 +18,7 @@ export class StatsService {
     const records = await this.recordRepo.getByGame(gameId);
     
     const totalPlayed = records.length;
-    const totalWon = records.filter(r => r.completed && !r.failed).length;
+    const totalWon = records.filter(r => !r.failed).length;
     const totalFailed = records.filter(r => r.failed).length;
     
     // Calculate streaks
@@ -41,7 +41,7 @@ export class StatsService {
       return 0;
     };
 
-    const completedRecords = records.filter(r => r.completed && getPrimaryScore(r) !== undefined);
+    const completedRecords = records.filter(r => !r.failed && getPrimaryScore(r) !== undefined);
     const averageScore = completedRecords.length > 0
       ? completedRecords.reduce((sum, r) => sum + getPrimaryScore(r), 0) / completedRecords.length
       : 0;
@@ -83,6 +83,10 @@ export class StatsService {
       
       scoreDistribution[categoryKey] = (scoreDistribution[categoryKey] || 0) + 1;
     });
+    // Include failures in the distribution under the 'X' bucket
+    if (totalFailed > 0) {
+      scoreDistribution['X'] = (scoreDistribution['X'] || 0) + totalFailed;
+    }
     
     // Last played date
     const lastPlayedDate = records.length > 0 ? records[0].createdAt.split('T')[0] : undefined;

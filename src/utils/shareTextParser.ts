@@ -14,8 +14,6 @@ function getCurrentDate(): string {
 }
 
 export interface ParsedShareText {
-  /** @deprecated Use scores field instead. This field will be removed in a future version. */
-  score?: number;
   scores?: Record<string, Record<string, number | string | undefined>>; // Structured scores e.g., { puzzle1: { attempts: 4, grade: 'A' } }
   failed: boolean; // Whether they failed (X/6)
   maxAttempts?: number; // Total attempts allowed (e.g., 6)
@@ -34,35 +32,29 @@ export interface ParsedShareText {
 }
 
 /**
- * Normalize parsed result to ensure legacy `score` is removed (scores should be primary)
- * and empty `scores` objects are normalized to `undefined`.
+ * Normalize parsed result to ensure empty `scores` objects are normalized to `undefined`.
  */
 function normalizeParsedShareText(res: ParsedShareText | null): ParsedShareText | null {
   if (!res) return null;
 
   try {
-    // Always remove the deprecated `score` field in favor of structured `scores`
-    if (res.score !== undefined) {
-      delete (res as any).score;
-    }
-
     // Normalize empty scores => undefined
     if (res.scores && Object.keys(res.scores).length === 0) {
       res.scores = undefined;
     }
 
-    // Also prune nested empty score objects
+    // Prune nested empty score objects and validate values
     if (res.scores) {
       for (const k of Object.keys(res.scores)) {
         const v = res.scores[k];
-        if (!v || Object.keys(v).length === 0) delete res.scores![k];
-        else {
-          // allow certain fields (like 'grade') to be string values
+        if (!v || Object.keys(v).length === 0) {
+          delete res.scores![k];
+        } else {
+          // Allow certain fields (like 'grade') to be string values
           const allowedStringFields = new Set(['grade']);
           for (const field of Object.keys(v)) {
             const val = (v as any)[field];
             if (typeof val === 'string' && !allowedStringFields.has(field)) {
-              // collect warnings for unexpected string values
               res.parseWarnings = res.parseWarnings || [];
               res.parseWarnings.push(`Parsed non-numeric score value for '${field}' in '${k}': "${val}"`);
             }
@@ -228,10 +220,10 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     }
     const [, puzzleNumber] = wantedleMatch;
     
-    // Extract the score line (e.g., "B - 19.2s")
-    const scoreMatch = text.match(/([A-F])\s*-\s*([\d.]+)s/i);
+    // Extract the score line (e.g., "B - 19.2s" or "S - 9.4s")
+    const scoreMatch = text.match(/([SABDF])\s*-\s*([\d.]+)s/i);
     if (!scoreMatch) {
-      throw new Error('❌ Incorrect share text for Wantedle. Could not find score line (e.g., "B - 19.2s")');
+      throw new Error('❌ Incorrect share text for Wantedle. Could not find score line (e.g., "S - 9.4s", "A - 12.3s", "F - 30.0s")');
     }
     
     const [, grade, timeStr] = scoreMatch;
@@ -240,8 +232,8 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     // Store time in milliseconds as main score (e.g., 19.2s -> 19200ms)
     const timeMs = Math.round(parseFloat(timeStr) * 1000);
     result.completed = true;
-    // Fail if grade is C, D, E, F
-    result.failed = /[C-F]/i.test(grade);
+    // Fail if grade is D or F (S, A, B, C are successes)
+    result.failed = /[DF]/i.test(grade);
     // Store grade as separate property
     result.grade = grade;
     // Store all scores in scores field (include grade and time)
@@ -875,11 +867,9 @@ function parseSpecificGame(text: string, lines: string[], gameName: string): Par
     if (scoreStr.toUpperCase() === 'X') {
       result.failed = true;
       result.completed = true;
-      result.score = undefined;
       result.scores = { puzzle1: { attempts: -1 } };
     } else {
       const attempts = parseInt(scoreStr, 10);
-      result.score = attempts; // guesses
       result.completed = true;
       result.failed = false;
       result.scores = { puzzle1: { attempts } };
@@ -1073,7 +1063,6 @@ export function parseShareText(text: string, expectedGameName?: string): ParsedS
       });
       
       if (allCorrect) {
-        result.score = emojiLines.length;
         result.completed = true;
         result.failed = false;
         result.scores = { puzzle1: { attempts: emojiLines.length } };

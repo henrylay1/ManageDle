@@ -19,6 +19,26 @@ const userRepo = new UserRepository(localStorage);
 let gameRepo = new GameRepository(new SupabaseStorageAdapter('guest'));
 
 /**
+ * Persist active game IDs to the correct backing store.
+ * - If `userId` is provided, persist to Supabase `user_profile_config` (upsert).
+ * - Otherwise persist to localStorage key `managedle:active_games`.
+ */
+async function persistActiveGames(activeIds: string[], userId?: string): Promise<void> {
+  try {
+    if (userId) {
+      // Use upsert to ensure row exists and active_games is set
+      await supabase
+        .from('user_profile_config')
+        .upsert({ user_id: userId, active_games: activeIds }, { onConflict: 'user_id' });
+    } else {
+      window.localStorage.setItem('managedle:active_games', JSON.stringify(activeIds));
+    }
+  } catch (err) {
+    console.error('[AppStore] persistActiveGames failed:', err);
+  }
+}
+
+/**
  * Merge locally cached game records into user's Supabase records
  */
 async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
@@ -68,14 +88,11 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
         .select('active_games')
         .eq('user_id', userId)
         .single();
-      
+
       const currentActiveGames = (configData?.active_games as string[]) || [];
       const mergedActiveGames = Array.from(new Set([...currentActiveGames, ...localActiveGameIds]));
-      
-      await supabase
-        .from('user_profile_config')
-        .update({ active_games: mergedActiveGames })
-        .eq('user_id', userId);
+
+      await persistActiveGames(mergedActiveGames, userId);
     }
     
     // Transform and insert new records
@@ -85,7 +102,7 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
       game_id: record.gameId,
       created_at: record.createdAt,
       scores: record.scores ?? null,
-      completed: record.completed,
+      // `completed` removed from DB - presence of record indicates it was played
       failed: record.failed,
       share_text: (() => {
         if (record.metadata && Array.isArray(record.metadata.shareTexts) && record.metadata.shareTexts.length > 0) {
@@ -104,8 +121,8 @@ async function mergeLocalRecordsIntoUserAccount(userId: string): Promise<void> {
         if (!record.metadata) return null;
         const cleaned = { ...record.metadata };
         if (Array.isArray(cleaned.shareTexts)) {
-          // Remove any parsed `shareText` blobs, `scores`, and `maxAttempts` carried in metadata entries
-          cleaned.shareTexts = cleaned.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }) => rest);
+          // Remove any parsed `shareText` blobs, `scores`, `maxAttempts` carried in metadata entries
+          cleaned.shareTexts = cleaned.shareTexts.map(({ shareText, scores, maxAttempts, ...rest }: any) => rest);
         }
         return Object.keys(cleaned).length > 0 ? cleaned : null;
       })(),
@@ -138,6 +155,7 @@ interface AppState {
   // Games (always from database)
   games: Game[];
   activeGames: Game[];
+  newGameIds: Set<string>;
   
   // Records
   todayRecords: GameRecord[];
@@ -166,6 +184,8 @@ interface AppState {
   toggleGameActive: (gameId: string) => Promise<void>;
   reorderActiveGames: (orderedGameIds: string[]) => Promise<void>;
   toggleOrganizeMode: () => void;
+  markGameNew: (gameId: string) => void;
+  clearNewGame: (gameId: string) => void;
   
   // Record actions
   addRecord: (record: Omit<GameRecord, 'recordId' | 'localId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -189,6 +209,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   todayRecords: [],
   statsCache: new Map(),
   isLoading: true,
+  newGameIds: new Set(),
 
   initialize: async () => {
     set({ isLoading: true });
@@ -500,15 +521,52 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addGame: async (game) => {
-    // Optimistic update
-    const { games } = get();
-    const newGames = [...games, game];
-    const activeGames = newGames.filter(g => g.isActive);
-    set({ games: newGames as Game[], activeGames: activeGames as Game[] });
+    // Always get fresh state for reliable prepend
+    const { games: currentGames, activeGames: currentActiveGames } = get();
+    
+    // Prepend new game so it appears first in UI immediately
+    const newGames = [game as Game, ...currentGames] as Game[];
+    
+    // Build activeGames with new game prepended when active
+    let activeGames: Game[] = [];
+    if (game.isActive) {
+      activeGames = [game as Game, ...currentActiveGames.filter(g => g.gameId !== (game as any).gameId)];
+    } else {
+      activeGames = newGames.filter(g => g.isActive) as Game[];
+    }
+    set({ games: newGames, activeGames });
+
+    // Mark as new (for shimmer)
+    const newSet = new Set(get().newGameIds);
+    newSet.add((game as any).gameId);
+    set({ newGameIds: newSet });
 
     // Save to database in background
     try {
-      await gameRepo.add(game);
+      const savedGame = await gameRepo.add(game);
+
+      // Update with canonical savedGame from DB
+      const { games: latestGames, activeGames: latestActiveGames } = get();
+      const canonicalGames = [savedGame, ...latestGames.filter(g => g.gameId !== savedGame.gameId)];
+      
+      let canonicalActive: Game[];
+      if (savedGame.isActive) {
+        canonicalActive = [savedGame, ...latestActiveGames.filter(g => g.gameId !== savedGame.gameId)];
+      } else {
+        canonicalActive = latestActiveGames.filter(g => g.gameId !== savedGame.gameId);
+      }
+      
+      set({ games: canonicalGames, activeGames: canonicalActive });
+
+      // Persist active games order
+      const { isAuthenticated, authUser } = get();
+      if (isAuthenticated && authUser) {
+        const activeIds = get().activeGames.map(g => g.gameId);
+        await persistActiveGames(activeIds, authUser.id);
+      } else {
+        const activeIds = get().activeGames.map(g => g.gameId);
+        await persistActiveGames(activeIds);
+      }
     } catch (error) {
       // Revert on error
       const refreshedGames = await gameRepo.getAll();
@@ -527,6 +585,54 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Save to database in background
     try {
       await gameRepo.update(gameId, updates);
+
+      // If `isActive` changed, persist user's active_games accordingly
+      if (updates.hasOwnProperty('isActive')) {
+        const { isAuthenticated, authUser } = get();
+        try {
+          if (isAuthenticated && authUser) {
+            const { data: configData } = await supabase
+              .from('user_profile_config')
+              .select('active_games')
+              .eq('user_id', authUser.id)
+              .single();
+
+            const currentActiveGames: string[] = Array.isArray(configData?.active_games) ? configData!.active_games : [];
+            let updatedActiveGames: string[];
+            if ((updates as any).isActive) {
+              // Prepend and remove duplicates
+              updatedActiveGames = [gameId, ...currentActiveGames.filter(id => id !== gameId)];
+            } else {
+              // Remove
+              updatedActiveGames = currentActiveGames.filter(id => id !== gameId);
+            }
+
+            await supabase
+              .from('user_profile_config')
+              .update({ active_games: updatedActiveGames })
+              .eq('user_id', authUser.id);
+
+            // Refresh games & activeGames from server to ensure canonical order
+            const refreshedGames = await gameRepo.getAll();
+            const { data: cfg } = await supabase
+              .from('user_profile_config')
+              .select('active_games')
+              .eq('user_id', authUser.id)
+              .single();
+            const activeIds = Array.isArray(cfg?.active_games) ? cfg.active_games : [];
+            const refreshedActiveGames = activeIds.map((id: string) => refreshedGames.find(g => g.gameId === id)).filter((g): g is Game => !!g && g.isActive);
+            const remaining = refreshedGames.filter(g => g.isActive && !refreshedActiveGames.find(r => r.gameId === g.gameId));
+            refreshedActiveGames.push(...remaining);
+            set({ games: refreshedGames, activeGames: refreshedActiveGames });
+          } else {
+            // Guest: persist active order to localStorage
+            const activeIds = get().activeGames.map(g => g.gameId);
+            window.localStorage.setItem('managedle:active_games', JSON.stringify(activeIds));
+          }
+        } catch (err) {
+          console.error('[AppStore] Failed to persist active_games after updateGame:', err);
+        }
+      }
     } catch (error) {
       // Revert on error
       const refreshedGames = await gameRepo.getAll();
@@ -545,6 +651,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Save to database in background
     try {
       await gameRepo.delete(gameId);
+
+      // If authenticated, remove from user's active_games config
+      const { isAuthenticated, authUser } = get();
+      if (isAuthenticated && authUser) {
+        try {
+          const { data: configData } = await supabase
+            .from('user_profile_config')
+            .select('active_games')
+            .eq('user_id', authUser.id)
+            .single();
+
+          const currentActiveGames: string[] = Array.isArray(configData?.active_games) ? configData!.active_games : [];
+          const updatedActiveGames = currentActiveGames.filter(id => id !== gameId);
+
+          await supabase
+            .from('user_profile_config')
+            .update({ active_games: updatedActiveGames })
+            .eq('user_id', authUser.id);
+        } catch (err) {
+          console.error('[AppStore] Failed to persist active_games after deleteGame:', err);
+        }
+      } else {
+        // Guest: persist active order to localStorage
+        const activeIds = activeGames.map(g => g.gameId);
+        window.localStorage.setItem('managedle:active_games', JSON.stringify(activeIds));
+      }
     } catch (error) {
       // Revert on error
       const refreshedGames = await gameRepo.getAll();
@@ -554,49 +686,39 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleGameActive: async (gameId) => {
-    // Optimistic update
-    const { games, authUser, isAuthenticated } = get();
-    const newGames = games.map(g => 
+    // Always get fresh state
+    const { games: currentGames, activeGames: currentActiveGames, authUser, isAuthenticated } = get();
+    
+    const newGames = currentGames.map(g => 
       g.gameId === gameId ? { ...g, isActive: !g.isActive } : g
     );
-    const activeGames = newGames.filter(g => g.isActive);
+    
+    const toggled = newGames.find(g => g.gameId === gameId);
+    
+    // When activating, prepend to active list; when deactivating, remove
+    let activeGames: Game[];
+    if (toggled?.isActive) {
+      activeGames = [toggled, ...currentActiveGames.filter(g => g.gameId !== gameId)];
+    } else {
+      activeGames = currentActiveGames.filter(g => g.gameId !== gameId);
+    }
+    
     set({ games: newGames, activeGames });
+
+    // Mark as new if activating
+    if (toggled?.isActive) {
+      const newSet = new Set(get().newGameIds);
+      newSet.add(gameId);
+      set({ newGameIds: newSet });
+    }
 
     // Save to database in background
     try {
-      // If user is logged in, update user_profile_config.active_games
+      const activeIds = get().activeGames.map(g => g.gameId);
       if (isAuthenticated && authUser) {
-        const gameToToggle = newGames.find(g => g.gameId === gameId);
-        const isNowActive = gameToToggle?.isActive ?? false;
-
-        // Get current active_games from user_profile_config
-        const { data: configData } = await supabase
-          .from('user_profile_config')
-          .select('active_games')
-          .eq('user_id', authUser.id)
-          .single();
-
-        const currentActiveGames = (configData?.active_games as string[]) || [];
-        
-        // Update the active_games set
-        let updatedActiveGames: string[];
-        if (isNowActive) {
-          // Add to set if not already present
-          updatedActiveGames = Array.from(new Set([...currentActiveGames, gameId]));
-        } else {
-          // Remove from set
-          updatedActiveGames = currentActiveGames.filter(id => id !== gameId);
-        }
-
-        // Update user_profile_config
-        await supabase
-          .from('user_profile_config')
-          .update({ active_games: updatedActiveGames })
-          .eq('user_id', authUser.id);
+        await persistActiveGames(activeIds, authUser.id);
       } else {
-        // Guest user: update localStorage directly
-        const activeGameIds = activeGames.map(g => g.gameId);
-        window.localStorage.setItem('managedle:active_games', JSON.stringify(activeGameIds));
+        await persistActiveGames(activeIds);
       }
     } catch (error) {
       // Revert on error
@@ -608,6 +730,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   toggleOrganizeMode: () => {
     set({ organizeMode: !get().organizeMode });
+  },
+
+  markGameNew: (gameId: string) => {
+    const s = new Set(get().newGameIds);
+    s.add(gameId);
+    set({ newGameIds: s });
+  },
+
+  clearNewGame: (gameId: string) => {
+    const s = new Set(get().newGameIds);
+    if (s.has(gameId)) {
+      s.delete(gameId);
+      set({ newGameIds: s });
+    }
   },
 
   reorderActiveGames: async (orderedGameIds: string[]) => {

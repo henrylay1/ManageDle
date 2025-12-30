@@ -26,7 +26,6 @@ export interface Game {
 export interface ShareTextEntry {
   name: string; // Name of the subtask (e.g., "main", "classic", "quote")
   shareText?: string; // The emoji grid/share text
-  completed: boolean;
   failed: boolean;
   // score?: number; // Legacy field removed, use scores in GameRecord
   scores?: Record<string, Record<string, number | string | undefined>>; // Optional parsed scores for this share text entry
@@ -52,7 +51,7 @@ export interface GameRecord {
   gameId: string; // References Game.gameId
   localId: string; // Owner device/user identifier
   userId?: string; // Backend user ID (populated after migration)
-  completed: boolean; // Whether the game was completed
+  // completed: boolean; // Removed - record existence indicates played; use `failed` to determine loss
   // score?: number; // Legacy score field removed, use scores instead
   scores?: Record<string, Record<string, number>>; // Structured scores matching game's scoreTypes e.g., {"puzzle1": {"attempts": 5}}
   failed: boolean; // Whether the user failed to solve
