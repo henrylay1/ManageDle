@@ -8,8 +8,9 @@ interface UserGameStats {
   wins: number;
   plays: number;
   icon: string;
-  streak: number;
-  maxStreak: number;
+  playStreak: number;
+  winStreak: number;
+  maxWinStreak: number;
 }
 
 interface UserProfileModalProps {
@@ -66,8 +67,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         return;
       }
 
-      // Aggregate stats by game_id - get latest record for each game to access streak/maxStreak
-      const statsMap = new Map<string, { wins: number; plays: number; streak: number; maxStreak: number }>();
+      // Aggregate stats by game_id - get latest record for each game to access play/win/maxWin streaks
+      const statsMap = new Map<string, { wins: number; plays: number; playStreak: number; winStreak: number; maxWinStreak: number }>();
       const latestRecordsMap = new Map<string, any>(); // Track latest record per game
       
       (recordsData || []).forEach(record => {
@@ -77,7 +78,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
         
         if (!statsMap.has(record.game_id)) {
-          statsMap.set(record.game_id, { wins: 0, plays: 0, streak: 0, maxStreak: 0 });
+          statsMap.set(record.game_id, { wins: 0, plays: 0, playStreak: 0, winStreak: 0, maxWinStreak: 0 });
         }
         const stat = statsMap.get(record.game_id)!;
         stat.plays++;
@@ -86,12 +87,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
       });
 
-      // Update streak/maxStreak from latest records
+      // Update play/win/max-win streaks from latest records (stored in record.metadata)
       latestRecordsMap.forEach((latestRecord, gameId) => {
         const stat = statsMap.get(gameId);
         if (stat && latestRecord.metadata) {
-          stat.streak = latestRecord.metadata.streak ?? 0;
-          stat.maxStreak = latestRecord.metadata.maxStreak ?? 0;
+          stat.playStreak = latestRecord.metadata.playstreak ?? 0;
+          stat.winStreak = latestRecord.metadata.winstreak ?? 0;
+          stat.maxWinStreak = latestRecord.metadata.maxWinstreak ?? 0;
         }
       });
 
@@ -105,8 +107,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           wins: stat.wins,
           plays: stat.plays,
           icon: game?.icon || '🎮',
-          streak: stat.streak,
-          maxStreak: stat.maxStreak,
+          playStreak: stat.playStreak ?? 0,
+          winStreak: stat.winStreak ?? 0,
+          maxWinStreak: stat.maxWinStreak ?? 0,
         });
       });
 
@@ -183,12 +186,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   </div>
                   <div className="user-profile-game-stats">
                     <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Streak</span>
-                      <span className="user-profile-stat-value">{stat.streak}</span>
+                      <span className="user-profile-stat-label">Play Streak</span>
+                      <span className="user-profile-stat-value">{stat.playStreak}</span>
                     </div>
                     <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Max</span>
-                      <span className="user-profile-stat-value">{stat.maxStreak}</span>
+                      <span className="user-profile-stat-label">Win Streak</span>
+                      <span className="user-profile-stat-value">{stat.winStreak}</span>
+                    </div>
+                    <div className="user-profile-stat">
+                      <span className="user-profile-stat-label">Max Win Streak</span>
+                      <span className="user-profile-stat-value">{stat.maxWinStreak}</span>
                     </div>
                     <div className="user-profile-stat">
                       <span className="user-profile-stat-label">Wins</span>
