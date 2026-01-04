@@ -1,0 +1,366 @@
+/* ScoreEntryModal specific styles - Modal, form, and button styles moved to Modal.css, Forms.css, and Buttons.css */
+
+.score-entry-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.score-entry-form > :not(.modal-actions) {
+  overflow-y: auto;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.section-header-row h3 {
+  margin: 0;
+}
+
+.share-text-entry {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.entry-name {
+  margin: 0;
+  font-size: 1rem;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.entry-name:hover {
+  background: #333;
+}
+
+.name-input {
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  background: #1a1a1a;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  color: #fff;
+  outline: none;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-remove:hover {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.entry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.score-input-small {
+  width: 80px;
+  padding: 0.4rem 0.6rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.score-input-small:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.share-text-area {
+  width: 100%;
+  padding: 0.75rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.share-text-area:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+.form-group input[type="number"],
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  border-radius: 8px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.checkbox-label:hover {
+  background: #333;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #667eea;
+  appearance: none;
+  background-color: #222;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 2px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+
+.checkbox-label span {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 2px solid #333;
+  background: #1a1a1a;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.btn-secondary {
+  background: #2a2a2a;
+  color: #ccc;
+}
+
+.btn-secondary:hover {
+  background: #333;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: light) {
+  .modal-content {
+    background: #ffffff;
+  }
+  
+  .modal-header {
+    background: #ffffff;
+    border-bottom-color: #e0e0e0;
+  }
+  
+  .modal-close {
+    color: #666;
+  }
+  
+  .modal-close:hover {
+    background: #f0f0f0;
+    color: #000;
+  }
+  
+  .checkbox-label {
+    background: #f9f9f9;
+  }
+  
+  .checkbox-label:hover {
+    background: #f0f0f0;
+  }
+  
+  .btn-secondary {
+    background: #f9f9f9;
+    color: #333;
+  }
+  
+  .btn-secondary:hover {
+    background: #e0e0e0;
+  }
+  
+  .form-group label {
+    color: #333;
+  }
+  
+  .modal-actions {
+    border-top-color: #e0e0e0;
+  }
+}
+
+.input-mode-toggle {
+  padding: 1rem 1.5rem;
+  background: #252525;
+  border-bottom: 1px solid #333;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.summary-text-area {
+  min-height: 150px;
+  font-family: monospace;
+}
+
+.summary-results {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #252525;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.summary-results h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.summary-result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.result-score {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #10b981;
+}
+
+@media (max-width: 640px) {
+  .modal-content {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+}
