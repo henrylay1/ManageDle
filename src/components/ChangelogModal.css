@@ -1,0 +1,30 @@
+.changelog-body {
+  padding: 0.5rem 0.5rem 1rem 0.5rem;
+}
+
+.changelog-content {
+  color: var(--text-primary, #ddd);
+  max-height: 62vh;
+  overflow: auto;
+  line-height: 1.5;
+}
+
+.changelog-content h1 {
+  font-size: 1.4rem;
+  margin: 0.6rem 0;
+}
+.changelog-content h2 {
+  font-size: 1.15rem;
+  margin: 0.5rem 0;
+}
+.changelog-content h3 {
+  font-size: 1rem;
+  margin: 0.4rem 0;
+}
+.changelog-content p {
+  margin: 0.35rem 0;
+}
+.changelog-content ul {
+  margin: 0.2rem 0 0.8rem 1.1rem;
+}
+.changelog-content li { margin-bottom: 0.25rem; }

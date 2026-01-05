@@ -1,0 +1,12 @@
+/* TicketModal specific styles - Form and button styles moved to Forms.css and Buttons.css */
+
+.ticket-modal {
+  min-width: 320px;
+  max-width: 400px;
+}
+
+.ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

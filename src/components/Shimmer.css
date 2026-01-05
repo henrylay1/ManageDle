@@ -1,0 +1,53 @@
+/* Consolidated shimmer effects */
+
+/* Generic shimmer effect for game cards (used with .shimmer-effect) */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer-effect {
+  animation: shimmer 1.5s infinite;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* New-game shimmer effect: show yellow gradient sweep until hovered */
+.game-card-wrapper.new .game-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card-wrapper.new .game-card::before {
+  content: '';
+  position: absolute;
+  left: -150%;
+  top: 0;
+  height: 100%;
+  width: 300%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255, 235, 59, 0.25) 45%, rgba(255,255,255,0) 55%);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: newCardShimmer 1.2s linear infinite;
+}
+
+.game-card-wrapper.new:hover .game-card::before {
+  display: none;
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+@keyframes newCardShimmer {
+  0% { transform: translateX(-100%) skewX(-20deg); }
+  100% { transform: translateX(100%) skewX(-20deg); }
+}

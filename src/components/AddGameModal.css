@@ -1,0 +1,8 @@
+/* AddGameModal specific styles - Form and button styles moved to Forms.css and Buttons.css */
+
+.add-game-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
