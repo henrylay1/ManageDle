@@ -12,7 +12,7 @@
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: https: blob:;
       font-src 'self' data:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com;
       base-uri 'self';
       form-action 'self';
     ">
@@ -24,24 +24,6 @@
     <meta name="keywords" content="wordle, puzzle games, daily games, word games, game tracker">
     
     <title>ManageDle - Your Wordle Game Hub</title>
-    <!-- Single Page Apps for GitHub Pages -->
-    <script type="text/javascript">
-      (function(l) {
-        // Redirect /ManageDle to /ManageDle/
-        if (l.pathname === '/ManageDle') {
-          window.location.replace('/ManageDle/');
-          return;
-        }
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname + decoded + l.hash
-          );
-        }
-      }(window.location))
-    </script>
   </head>
   <body>
     <div id="root"></div>

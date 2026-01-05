@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react';
 import './Modal.css';
 import './ChangelogModal.css';
-import CHANGELOG from '@/content/changelog';
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderInline(text: string) {
+  // Escape first, then replace simple inline markdown tokens
+  let t = escapeHtml(text);
+  // Bold: **text**
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text*
+  t = t.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Inline code: `code`
+  t = t.replace(/`(.+?)`/g, '<code>$1</code>');
+  return t;
 }
 
 function parseMarkdown(md: string) {
@@ -24,15 +35,15 @@ function parseMarkdown(md: string) {
     }
 
     if (line.startsWith('### ')) {
-      html += `<h3>${escapeHtml(line.slice(4))}</h3>`;
+      html += `<h3>${renderInline(line.slice(4))}</h3>`;
       continue;
     }
     if (line.startsWith('## ')) {
-      html += `<h2>${escapeHtml(line.slice(3))}</h2>`;
+      html += `<h2>${renderInline(line.slice(3))}</h2>`;
       continue;
     }
     if (line.startsWith('# ')) {
-      html += `<h1>${escapeHtml(line.slice(2))}</h1>`;
+      html += `<h1>${renderInline(line.slice(2))}</h1>`;
       continue;
     }
     if (line === '---') {
@@ -44,12 +55,12 @@ function parseMarkdown(md: string) {
         inList = true;
         html += '<ul>';
       }
-      html += `<li>${escapeHtml(line.slice(2))}</li>`;
+      html += `<li>${renderInline(line.slice(2))}</li>`;
       continue;
     }
 
     // fallback paragraph
-    html += `<p>${escapeHtml(line)}</p>`;
+    html += `<p>${renderInline(line)}</p>`;
   }
 
   if (inList) html += '</ul>';
@@ -61,8 +72,10 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     let mounted = true;
-    // Try fetching the changelog from the app root
-    fetch('/CHANGELOG.md')
+    // Fetch changelog from GitHub
+    const githubRaw = 'https://raw.githubusercontent.com/henrylay1/ManageDle/main/CHANGELOG.md';
+
+    fetch(githubRaw)
       .then(res => {
         if (!res.ok) throw new Error('Not found');
         return res.text();
@@ -71,9 +84,9 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
         if (!mounted) return;
         setContent(parseMarkdown(md));
       })
-      .catch(() => {
-        // Fallback: use bundled changelog content
-        if (mounted) setContent(parseMarkdown(CHANGELOG));
+      .catch(err => {
+        console.error('Failed to load changelog:', err);
+        if (mounted) setContent('<p style="color: #ef4444;">Unable to load changelog. Please check your connection or visit the <a href="https://github.com/henrylay1/ManageDle/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>');
       });
 
     return () => { mounted = false; };

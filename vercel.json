@@ -1,0 +1,10 @@
+{
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "https://otlaufzytqqtuoqqexgg.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE": "sb_publishable_E8_M4KkHaJLoGXzY9ha6Ow_zQpBQ9b0"
+  }
+}

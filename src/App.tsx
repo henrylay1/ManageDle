@@ -22,7 +22,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter basename="/ManageDle">
+    <BrowserRouter basename="/">
       <div className="app">
         <Routes>
           <Route path="/" element={<Dashboard />} />
