@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { socialService } from '../src/services/socialService';
 import { rateLimiter } from '../src/utils/rateLimiter';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req: any, res: any) {
   // Only allow GET requests

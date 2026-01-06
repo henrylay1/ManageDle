@@ -173,7 +173,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         <div className="user-profile-header">
           {isImage ? (
             <a
-              href={`/ManageDle/profile/${encodeURIComponent(displayName)}`}
+              href={`/profile/${encodeURIComponent(displayName)}`}
               target="_blank"
               rel="noopener noreferrer"
               title="View public profile"

@@ -63,60 +63,71 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           const followedIds = new Set<string>(followingLeaderboard.map((u: any) => u.id));
           followedIds.add(authUser.id);
 
-          // Get all game leaderboards within date range and aggregate only followed users
-          const allLeaderboards = await leaderboardService.getAllGamesLeaderboard(50, sinceDate);
-          const userMap = new Map<string, LeaderboardEntry>();
+          // Get leaderboard data - either specific game or all games
+          let leaderboardData: any[] = [];
+          
+          if (selectedGame === 'all') {
+            // Get all game leaderboards within date range and aggregate only followed users
+            const allLeaderboards = await leaderboardService.getAllGamesLeaderboard(50, sinceDate);
+            const userMap = new Map<string, LeaderboardEntry>();
 
-          for (const lb of allLeaderboards) {
-            for (const entry of lb.entries) {
-              if (!followedIds.has(entry.userId)) continue;
+            for (const lb of allLeaderboards) {
+              for (const entry of lb.entries) {
+                if (!followedIds.has(entry.userId)) continue;
 
-              if (!userMap.has(entry.userId)) {
-                userMap.set(entry.userId, { ...entry, gameId: 'all', gameName: 'All Games' });
-              } else {
-                const agg = userMap.get(entry.userId)!;
-                agg.totalWins += entry.totalWins;
-                agg.totalPlayed += entry.totalPlayed;
-                agg.winRate = agg.totalPlayed > 0 ? (agg.totalWins / agg.totalPlayed) * 100 : 0;
-                agg.currentStreak = Math.max(agg.currentStreak, entry.currentStreak);
-                agg.maxStreak = Math.max(agg.maxStreak, entry.maxStreak);
-                if (agg.averageScore !== null && entry.averageScore !== null) {
-                  agg.averageScore = (agg.averageScore + entry.averageScore) / 2;
-                } else if (entry.averageScore !== null) {
-                  agg.averageScore = entry.averageScore;
-                }
-                if (entry.lastPlayed > agg.lastPlayed) {
-                  agg.lastPlayed = entry.lastPlayed;
+                if (!userMap.has(entry.userId)) {
+                  userMap.set(entry.userId, { ...entry, gameId: 'all', gameName: 'All Games' });
+                } else {
+                  const agg = userMap.get(entry.userId)!;
+                  agg.totalWins += entry.totalWins;
+                  agg.totalPlayed += entry.totalPlayed;
+                  agg.winRate = agg.totalPlayed > 0 ? (agg.totalWins / agg.totalPlayed) * 100 : 0;
+                  agg.currentStreak = Math.max(agg.currentStreak, entry.currentStreak);
+                  agg.maxStreak = Math.max(agg.maxStreak, entry.maxStreak);
+                  if (agg.averageScore !== null && entry.averageScore !== null) {
+                    agg.averageScore = (agg.averageScore + entry.averageScore) / 2;
+                  } else if (entry.averageScore !== null) {
+                    agg.averageScore = entry.averageScore;
+                  }
+                  if (entry.lastPlayed > agg.lastPlayed) {
+                    agg.lastPlayed = entry.lastPlayed;
+                  }
                 }
               }
             }
-          }
 
-          // Ensure current user exists in map (add zeroed entry if no records)
-          if (!userMap.has(authUser.id)) {
-            userMap.set(authUser.id, {
-              userId: authUser.id,
-              displayName: authUser.displayName || 'You',
-              avatarUrl: authUser.avatarUrl,
-              gameId: 'all',
-              gameName: 'All Games',
-              totalWins: 0,
-              totalPlayed: 0,
-              winRate: 0,
-              currentStreak: 0,
-              maxStreak: 0,
-              averageScore: null,
-              lastPlayed: new Date().toISOString(),
+            // Ensure current user exists in map (add zeroed entry if no records)
+            if (!userMap.has(authUser.id)) {
+              userMap.set(authUser.id, {
+                userId: authUser.id,
+                displayName: authUser.displayName || 'You',
+                avatarUrl: authUser.avatarUrl,
+                gameId: 'all',
+                gameName: 'All Games',
+                totalWins: 0,
+                totalPlayed: 0,
+                winRate: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                averageScore: null,
+                lastPlayed: new Date().toISOString(),
+              });
+            }
+
+            const aggregated = Array.from(userMap.values());
+            aggregated.sort((a, b) => {
+              if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
+              return b.winRate - a.winRate;
             });
+
+            leaderboardData = aggregated.slice(0, 100);
+          } else {
+            // Get specific game leaderboard and filter by followed users
+            const gameLeaderboard = await leaderboardService.getGameLeaderboard(selectedGame, 100, sinceDate);
+            leaderboardData = gameLeaderboard.filter(entry => followedIds.has(entry.userId));
           }
 
-          const aggregated = Array.from(userMap.values());
-          aggregated.sort((a, b) => {
-            if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
-            return b.winRate - a.winRate;
-          });
-
-          setLeaderboard(aggregated.slice(0, 100));
+          setLeaderboard(leaderboardData);
         } catch (err) {
           console.error('Error loading following leaderboard:', err);
           setError('Failed to load following leaderboard');
