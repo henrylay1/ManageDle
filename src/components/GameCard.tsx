@@ -77,9 +77,10 @@ interface GameCardProps {
   onReset?: () => void;
   isSaving?: boolean;
   organizeMode?: boolean;
+  shimmer?: boolean;
 }
 
-function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset, isSaving, organizeMode }: GameCardProps) {
+function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onReset, isSaving, organizeMode, shimmer }: GameCardProps) {
   // Determine played/win state: existence of `record` means played; wins are `!failed`.
   const isPlayed = !!record;
   // shareTexts unused here — derive from record.metadata only when needed
@@ -109,7 +110,7 @@ function GameCard({ game, record, onPlay, onLogScore, onViewStats, onRemove, onR
   const timeUntilReset = formatTimeUntilReset(game);
 
   return (
-    <div className={`game-card ${organizeMode ? 'organize' : ''} ${hasError ? 'error' : ''} ${isPlayed ? 'completed' : ''}`}>
+    <div className={`game-card ${organizeMode ? 'organize' : ''} ${hasError ? 'error' : ''} ${isPlayed ? 'completed' : ''} ${shimmer ? 'shimmer' : ''}`}>
       <div className="game-card-header">
         <GameIconTooltip 
           icon={game.icon || '🎮'} 

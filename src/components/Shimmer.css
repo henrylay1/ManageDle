@@ -22,14 +22,13 @@
   background-size: 1000px 100%;
 }
 
-/* Universal shimmer effect: show yellow gradient sweep until hovered */
-/* Works on any element with .shimmer class */
-.shimmer {
+/* Shimmer for game list items (compact list view) */
+.game-list-item.shimmer {
   position: relative;
   overflow: hidden;
 }
 
-.shimmer::before {
+.game-list-item.shimmer::before {
   content: '';
   position: absolute;
   left: -150%;
@@ -43,7 +42,7 @@
   z-index: 1;
 }
 
-.shimmer:hover::before {
+.game-list-item.shimmer:hover::before {
   display: none;
   animation-play-state: paused;
   opacity: 0;

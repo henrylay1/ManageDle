@@ -685,7 +685,7 @@ function Dashboard() {
                           gameCardRefsMap.current.set(game.gameId, el);
                         }
                       }}
-                      className={`game-card-wrapper ${newGameIds?.has(game.gameId) ? 'shimmer' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
+                      className={`game-card-wrapper ${draggedGameId === game.gameId ? 'dragging' : ''}`}
                       style={transformStyle}
                       draggable={true}
                       onDragStart={(e) => handleDragStart(e, game.gameId)}
@@ -693,7 +693,11 @@ function Dashboard() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e)}
                       onDragEnd={handleDragEnd}
-                      onMouseEnter={() => { if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId); }}
+                      onMouseEnter={(e) => {
+                        if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId);
+                        const card = (e.currentTarget as HTMLElement).querySelector('.game-card');
+                        if (card) card.classList.remove('shimmer');
+                      }}
                     >
                       <GameCard
                         game={game}
@@ -707,6 +711,7 @@ function Dashboard() {
                           await useAppStore.getState().loadTodayRecords();
                         }}
                         organizeMode={true}
+                        shimmer={newGameIds?.has(game.gameId)}
                       />
                     </div>
                   );
@@ -738,9 +743,13 @@ function Dashboard() {
                       gameCardRefsMap.current.set(game.gameId, el);
                     }
                   }}
-                  className={`game-card-wrapper ${newGameIds?.has(game.gameId) ? 'shimmer' : ''}`}
+                  className={`game-card-wrapper`}
                   style={{ order: index }}
-                  onMouseEnter={() => { if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId); }}
+                  onMouseEnter={(e) => {
+                    if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId);
+                    const card = (e.currentTarget as HTMLElement).querySelector('.game-card');
+                    if (card) card.classList.remove('shimmer');
+                  }}
                 >
                   <GameCard
                     game={game}
@@ -753,6 +762,7 @@ function Dashboard() {
                     onReset={async () => {
                       await useAppStore.getState().loadTodayRecords();
                     }}
+                    shimmer={newGameIds?.has(game.gameId)}
                   />
                 </div>
               ));
