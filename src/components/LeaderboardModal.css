@@ -1,4 +1,4 @@
-/* Leaderboard-specific styles - common modal/button styles moved to shared files */
+/* Leaderboard-specific styles - uses theme variables for light/dark mode */
 
 .leaderboard-content {
   padding: 0;
@@ -6,6 +6,52 @@
   flex-direction: column;
   gap: 1rem;
   flex: 1;
+}
+
+/* Fixed height scrollable table container - fits 10 rows */
+.leaderboard-table-container {
+  height: 500px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  position: relative;
+  background: var(--surface-secondary);
+}
+
+/* Loading overlay positioned over table */
+.leaderboard-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--surface);
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: var(--radius-md);
+}
+
+.leaderboard-loading-overlay p {
+  color: var(--text-secondary);
+}
+
+/* Spinner animation */
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .leaderboard-table {
@@ -17,78 +63,90 @@
 .leaderboard-table thead {
   position: sticky;
   top: 0;
-  background-color: rgba(255, 255, 255, 0.3);
+  background: var(--surface-secondary);
+  z-index: 1;
 }
 
 .leaderboard-table th {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   text-align: left;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border);
 }
 
 .leaderboard-table th:nth-child(1) {
-  width: 16.666%;
+  width: 15%;
 }
 
 .leaderboard-table th:nth-child(2) {
-  width: 50%;
+  width: 55%;
 }
 
 .leaderboard-table th:nth-child(3),
 .leaderboard-table th:nth-child(4) {
-  width: 16.666%;
+  width: 15%;
   text-align: center;
 }
 
-.leaderboard-table tbody {
-  background-color: rgba(255, 255, 255, 0.3);
+.leaderboard-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--transition-fast);
+}
+
+.leaderboard-table tbody tr:hover {
+  background-color: var(--surface);
 }
 
 .leaderboard-table td {
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
-.leaderboard-table td:nth-child(2) {
-  width: 50%;
+.leaderboard-table td:nth-child(1) {
+  font-weight: 600;
 }
 
-.leaderboard-table td:nth-child(1),
 .leaderboard-table td:nth-child(3),
 .leaderboard-table td:nth-child(4) {
-  width: 16.666%;
   text-align: center;
+  font-weight: 500;
+  color: var(--accent);
 }
 
 /* Player button with avatar */
 .leaderboard-player-button {
-  background: radial-gradient(circle, #C1666B, #8B3A3F);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  border: none;
   font-weight: 500;
-  box-shadow: 0 5px 7px -1px rgba(51, 51, 51, 0.23);
-  transition: transform 0.15s cubic-bezier(0.7, 0.98, 0.86, 0.98), 
-              box-shadow 0.25s cubic-bezier(0.7, 0.98, 0.86, 0.98);
+  transition: transform var(--transition-fast), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .leaderboard-player-button:hover {
-  transform: scale(1.1);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: var(--accent);
 }
 
 .leaderboard-player-button:active {
-  transform: scale(0.95);
+  transform: scale(0.98);
 }
 
 /* Avatar with gradient border */
 .leaderboard-player-button .leaderboard-avatar {
-  padding: 3px;
+  padding: 2px;
   border-radius: 50%;
-  background: linear-gradient(45deg, #ff7a18 0%, #ff944d 50%, #ffc58f 100%);
+  background: var(--accent-gradient);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -101,7 +159,7 @@
   border-radius: 50%;
   object-fit: cover;
   display: block;
-  border: 2px solid var(--card-bg, #fff);
+  border: 2px solid var(--surface);
   box-sizing: border-box;
 }
 
@@ -111,32 +169,37 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  background: black;
+  background: var(--surface-secondary);
 }
 
 .leaderboard-avatar-placeholder {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: #e5e7eb;
+  background: var(--surface-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.625rem;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .leaderboard-player-name {
-  color: white;
+  color: var(--text-primary);
 }
 
 .leaderboard-player-name.current-user {
   font-weight: bold;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .leaderboard-table tr.current-user {
-  background-color: rgba(59, 130, 246, 0.1);
-  font-weight: 600;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 }
 
-
+.leaderboard-table tr.current-user td {
+  font-weight: 600;
+}

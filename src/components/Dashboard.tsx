@@ -119,7 +119,6 @@ function Dashboard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['academic']);
-  const [shimmeringGameId, setShimmeringGameId] = useState<string | null>(null);
   const gameCardRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Drag and drop state
@@ -175,15 +174,55 @@ function Dashboard() {
   };
 
   const handleShimmerGameCard = (game: Game) => {
-    // Scroll to and shimmer the game card (without removing)
+    // Scroll to and shimmer the game card
     const cardRef = gameCardRefsMap.current.get(game.gameId);
     if (cardRef) {
       cardRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
       
-      // Apply shimmer effect
-      setShimmeringGameId(game.gameId);
-      setTimeout(() => setShimmeringGameId(null), 1500);
+      // Apply yellow-gradient shimmer effect via .shimmer class to the game-card
+      const gameCard = cardRef.querySelector('.game-card');
+      if (gameCard) {
+        gameCard.classList.add('shimmer');
+        // Shimmer persists until element is hovered
+      }
     }
+  };
+
+  const handleNavigateToGame = (gameId: string) => {
+    // Close leaderboard modal (this will also close nested user profile modals)
+    setShowLeaderboard(false);
+    
+    // Find the game
+    const game = games.find(g => g.gameId === gameId);
+    if (!game) return;
+    
+    // Small delay to allow modals to close before scrolling
+    setTimeout(() => {
+      if (game.isActive) {
+        // Game is in active roster - scroll to the card and shimmer it
+        handleShimmerGameCard(game);
+      } else {
+        // Game is not active - expand its category and scroll to the list item
+        const category = game.category || 'misc';
+        
+        // Expand the category if not already expanded
+        if (!expandedCategories.includes(category)) {
+          setExpandedCategories(prev => [...prev, category]);
+        }
+        
+        // Wait for category to expand, then scroll to the game list item
+        setTimeout(() => {
+          const listItem = document.querySelector(`[data-game-list-item="${gameId}"]`);
+          if (listItem) {
+            listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Apply yellow-gradient shimmer effect via .shimmer class
+            listItem.classList.add('shimmer');
+            // Shimmer persists until element is hovered
+          }
+        }, 100);
+      }
+    }, 150);
   };
 
   // Drag and drop handlers
@@ -646,7 +685,7 @@ function Dashboard() {
                           gameCardRefsMap.current.set(game.gameId, el);
                         }
                       }}
-                      className={`game-card-wrapper ${shimmeringGameId === game.gameId ? 'shimmer-effect' : ''} ${newGameIds?.has(game.gameId) ? 'new' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
+                      className={`game-card-wrapper ${newGameIds?.has(game.gameId) ? 'shimmer' : ''} ${draggedGameId === game.gameId ? 'dragging' : ''}`}
                       style={transformStyle}
                       draggable={true}
                       onDragStart={(e) => handleDragStart(e, game.gameId)}
@@ -699,7 +738,7 @@ function Dashboard() {
                       gameCardRefsMap.current.set(game.gameId, el);
                     }
                   }}
-                  className={`game-card-wrapper ${shimmeringGameId === game.gameId ? 'shimmer-effect' : ''} ${newGameIds?.has(game.gameId) ? 'new' : ''}`}
+                  className={`game-card-wrapper ${newGameIds?.has(game.gameId) ? 'shimmer' : ''}`}
                   style={{ order: index }}
                   onMouseEnter={() => { if (newGameIds?.has(game.gameId)) clearNewGame(game.gameId); }}
                 >
@@ -740,7 +779,13 @@ function Dashboard() {
           {expandedCategories.includes('academic') && (
             <div className="games-list">
               {games.filter(g => g.category === 'academic').map((game) => (
-                <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
+                <div 
+                  key={game.gameId} 
+                  className="game-list-item" 
+                  data-game-list-item={game.gameId} 
+                  style={{ position: 'relative' }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).classList.remove('shimmer')}
+                >
                   <GameIconTooltip icon={game.icon || '🎮'} description={game.description} className="game-icon" />
                   <span className="game-name">{game.displayName}</span>
                   {game.isActive ? (
@@ -783,7 +828,13 @@ function Dashboard() {
             <div className="games-list">
               {games.filter(g => g.category === 'games').map(game => {
                 return (
-                  <div key={game.gameId} className="game-list-item" style={{ position: 'relative' }}>
+                  <div 
+                    key={game.gameId} 
+                    className="game-list-item" 
+                    data-game-list-item={game.gameId} 
+                    style={{ position: 'relative' }}
+                    onMouseEnter={(e) => (e.currentTarget as HTMLElement).classList.remove('shimmer')}
+                  >
                     <GameIconTooltip icon={game.icon || '🎮'} description={game.description} className="game-icon" />
                     <span className="game-name">{game.displayName}</span>
                     {game.isActive ? (
@@ -826,7 +877,12 @@ function Dashboard() {
           {expandedCategories.includes('misc') && (
             <div className="games-list">
               {games.filter(g => g.category === 'misc').map(game => (
-                <div key={game.gameId} className="game-list-item">
+                <div 
+                  key={game.gameId} 
+                  className="game-list-item" 
+                  data-game-list-item={game.gameId}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).classList.remove('shimmer')}
+                >
                   <GameIconTooltip icon={game.icon || '🎮'} description={game.description} className="game-icon" />
                   <span className="game-name">{game.displayName}</span>
                   {game.isActive ? (
@@ -982,6 +1038,7 @@ function Dashboard() {
       <LeaderboardModal
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
+        onNavigateToGame={handleNavigateToGame}
       />
     </div>
   );

@@ -22,13 +22,40 @@
   background-size: 1000px 100%;
 }
 
-/* New-game shimmer effect: show yellow gradient sweep until hovered */
-.game-card-wrapper.new .game-card {
+/* Universal shimmer effect: show yellow gradient sweep until hovered */
+/* Works on any element with .shimmer class */
+.shimmer {
   position: relative;
   overflow: hidden;
 }
 
-.game-card-wrapper.new .game-card::before {
+.shimmer::before {
+  content: '';
+  position: absolute;
+  left: -150%;
+  top: 0;
+  height: 100%;
+  width: 300%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255, 235, 59, 0.25) 45%, rgba(255,255,255,0) 55%);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: newCardShimmer 1.2s linear infinite;
+  z-index: 1;
+}
+
+.shimmer:hover::before {
+  display: none;
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+/* Special styling for game cards with shimmer */
+.game-card.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card.shimmer::before {
   content: '';
   position: absolute;
   left: -150%;
@@ -41,7 +68,7 @@
   animation: newCardShimmer 1.2s linear infinite;
 }
 
-.game-card-wrapper.new:hover .game-card::before {
+.game-card.shimmer:hover::before {
   display: none;
   animation-play-state: paused;
   opacity: 0;

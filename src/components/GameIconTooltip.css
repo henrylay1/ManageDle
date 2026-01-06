@@ -37,3 +37,31 @@
   border: 5px solid transparent;
   border-top-color: #222;
 }
+
+/* Portal-based tooltip (escapes overflow). Uses fixed positioning anchored near the icon center */
+.game-icon-tooltip-popup-portal {
+  position: fixed;
+  transform: translate(-50%, -120%);
+  background: #222;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  /* Ensure tooltip is above modal overlays (e.g., z-index 9999) */
+  z-index: 11000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+
+.game-icon-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #222;
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+}

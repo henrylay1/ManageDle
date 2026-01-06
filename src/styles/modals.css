@@ -44,14 +44,14 @@
   position: relative;
 }
 
-/* Leaderboard specific styling */
-.modal-content.leaderboard-modal {
-  background-image: repeating-radial-gradient(circle, transparent 0%, transparent 10%, rgba(54, 89, 219, 0.33) 10%, rgba(54, 89, 219, 0.33) 17%), 
-                    linear-gradient(to right, #5b7cfa, #3659db);
+/* Leaderboard and User Profile shared styling - uses theme variables */
+.modal-content.leaderboard-modal,
+.modal-content.user-profile-modal {
+  background: var(--surface);
   max-width: 56rem;
   max-height: 80vh;
   padding: 1.5rem;
-  color: black;
+  color: var(--text-primary);
 }
 
 /* Modal Header */
@@ -73,17 +73,20 @@
   font-weight: bold;
 }
 
-/* Auth and Leaderboard modal headers */
+/* Auth, Leaderboard, and User Profile modal headers */
 .auth-modal .modal-header,
-.leaderboard-modal .modal-header {
+.leaderboard-modal .modal-header,
+.user-profile-modal .modal-header {
   background: transparent;
-  border-bottom: none;
+  border-bottom: 2px solid var(--border);
   padding: 0 0 var(--spacing-lg) 0;
   position: relative;
 }
 
-.leaderboard-modal .modal-header h2 {
-  font-size: 2rem;
+.leaderboard-modal .modal-header h2,
+.user-profile-modal .modal-header h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
 }
 
 /* Modal Body */

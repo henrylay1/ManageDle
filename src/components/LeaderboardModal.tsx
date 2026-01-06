@@ -12,6 +12,7 @@ interface LeaderboardModalProps {
   isOpen: boolean;
   onClose: () => void;
   gameId?: string;
+  onNavigateToGame?: (gameId: string) => void;
 }
 
 interface SelectedUserProfile {
@@ -20,7 +21,7 @@ interface SelectedUserProfile {
   avatarUrl: string | null;
 }
 
-export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onClose, gameId }) => {
+export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onClose, gameId, onNavigateToGame }) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -257,31 +258,36 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
 
           {/* Leaderboard table */}
           <div className="flex-1 overflow-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <p className="text-gray-500">Loading leaderboard...</p>
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="p-4 bg-red-100 text-red-700 rounded-md">
               {error}
             </div>
-          ) : leaderboard.length === 0 ? (
+          ) : leaderboard.length === 0 && !isLoading ? (
             <div className="text-center py-8 text-gray-500">
               <p>No leaderboard data yet.</p>
               <p className="text-sm mt-2">Be the first to set a record!</p>
             </div>
           ) : (
-            <table className="leaderboard-table">
-              <thead className="bg-gray-100 sticky top-0">
-                <tr>
-                  <th className="px-4 py-2 text-left text-sm font-semibold">Rank</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold">Player</th>
-                  {/* Followers column removed */}
-                  <th className="px-4 py-2 text-center text-sm font-semibold">Wins</th>
-                  <th className="px-4 py-2 text-center text-sm font-semibold">Played</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="leaderboard-table-container">
+              {isLoading && (
+                <div className="leaderboard-loading-overlay">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="spinner"></div>
+                    <p className="text-gray-600 text-sm">Loading leaderboard...</p>
+                  </div>
+                </div>
+              )}
+              <table className="leaderboard-table">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-sm font-semibold">Rank</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold">Player</th>
+                    {/* Followers column removed */}
+                    <th className="px-4 py-2 text-center text-sm font-semibold">Wins</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold">Played</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {leaderboard.map((entry, index) => {
                   const isCurrentUser = authUser && entry.userId === authUser.id;
                   return (
@@ -330,6 +336,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                 })}
               </tbody>
             </table>
+            </div>
           )}
           </div>
         </div>
@@ -342,8 +349,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           userId={selectedUser.userId}
           displayName={selectedUser.displayName}
           avatarUrl={selectedUser.avatarUrl}
+          onNavigateToGame={onNavigateToGame}
+
         />
       )}
     </div>
   );
 };
+

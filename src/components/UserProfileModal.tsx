@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { socialService } from '@/services/socialService';
 import { FollowButton } from './FollowButton';
+import { GameIconTooltip } from './GameIconTooltip';
 import { validateStreaks } from '@/utils/helpers';
+import '../styles/modals.css';
 import './UserProfileModal.css';
 
 interface UserGameStats {
@@ -11,6 +13,7 @@ interface UserGameStats {
   wins: number;
   plays: number;
   icon: string;
+  description?: string;
   playStreak: number;
   winStreak: number;
   maxWinStreak: number;
@@ -30,6 +33,7 @@ interface UserProfileModalProps {
   displayName: string;
   avatarUrl: string | null;
   isNested?: boolean;
+  onNavigateToGame?: (gameId: string) => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -38,7 +42,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   userId,
   displayName,
   avatarUrl,
-  isNested = false,
+  onNavigateToGame,
 }) => {
   const [gameStats, setGameStats] = useState<UserGameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,7 +105,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       // Fetch all games metadata from Supabase
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
-        .select('game_id, name, icon');
+        .select('game_id, name, icon, description');
 
       if (gamesError) {
         console.error('Failed to fetch games metadata:', gamesError);
@@ -156,6 +160,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           wins: stat.wins,
           plays: stat.plays,
           icon: game?.icon || '🎮',
+          description: game?.description,
           playStreak: stat.playStreak ?? 0,
           winStreak: stat.winStreak ?? 0,
           maxWinStreak: stat.maxWinStreak ?? 0,
@@ -177,10 +182,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const isImage = typeof avatarUrl === 'string' && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
   return (
-    <div className="user-profile-backdrop" onClick={onClose} style={isNested ? { background: 'transparent' } : undefined}>
-      <div className="user-profile-container" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="user-profile-header">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content user-profile-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
           {isImage ? (
             <a
               href={`/profile/${encodeURIComponent(displayName)}`}
@@ -202,14 +206,26 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               No Image
             </div>
           )}
+
           <div>
             <h2 className="user-profile-name">{displayName}</h2>
             <div className="user-profile-stats-header">
               <span className="user-profile-followers">👥 {followersCount} followers</span>
             </div>
           </div>
+
           <FollowButton userId={userId} displayName={displayName} />
+
+          <button
+            onClick={onClose}
+            className="modal-close"
+            aria-label="Close profile"
+          >
+            ×
+          </button>
         </div>
+
+        <div className="user-profile-body">
 
         {/* Games List */}
         <div className="flex-1 overflow-auto">
@@ -226,41 +242,45 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <p>No games played yet.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div>
               <h3 className="user-profile-games-title">Game Statistics</h3>
-              {gameStats.map(stat => (
-                <div
-                  key={stat.gameId}
-                  className="user-profile-game-item"
-                >
-                  <div className="user-profile-game-info">
-                    <span className="user-profile-game-icon">{stat.icon}</span>
-                    <span className="user-profile-game-name">{stat.gameName}</span>
-                  </div>
-                  <div className="user-profile-game-stats">
-                    <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Play Streak</span>
-                      <span className="user-profile-stat-value">{stat.playStreak}</span>
-                    </div>
-                    <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Win Streak</span>
-                      <span className="user-profile-stat-value">{stat.winStreak}</span>
-                    </div>
-                    <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Max Win Streak</span>
-                      <span className="user-profile-stat-value">{stat.maxWinStreak}</span>
-                    </div>
-                    <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Wins</span>
-                      <span className="user-profile-stat-value">{stat.wins}</span>
-                    </div>
-                    <div className="user-profile-stat">
-                      <span className="user-profile-stat-label">Plays</span>
-                      <span className="user-profile-stat-value">{stat.plays}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <table className="user-profile-games-table">
+                <thead>
+                  <tr>
+                    <th>Game</th>
+                    <th>Play Streak</th>
+                    <th>Win Streak</th>
+                    <th>Max Win Streak</th>
+                    <th>Wins</th>
+                    <th>Plays</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gameStats.map(stat => (
+                    <tr key={stat.gameId} className="user-profile-game-row">
+                      <td className="user-profile-game-cell user-profile-game-cell-clickable">
+                        <GameIconTooltip 
+                          icon={stat.icon} 
+                          description={stat.description} 
+                          className="user-profile-game-icon" 
+                        />
+                        <button
+                          className="user-profile-game-name-button"
+                          onClick={() => onNavigateToGame?.(stat.gameId)}
+                          title="Click to view game in dashboard"
+                        >
+                          {stat.gameName}
+                        </button>
+                      </td>
+                      <td className="user-profile-game-cell">{stat.playStreak}</td>
+                      <td className="user-profile-game-cell">{stat.winStreak}</td>
+                      <td className="user-profile-game-cell">{stat.maxWinStreak}</td>
+                      <td className="user-profile-game-cell">{stat.wins}</td>
+                      <td className="user-profile-game-cell">{stat.plays}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
@@ -310,29 +330,23 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           )}
         </div>
-
-        {/* Close Button */}
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-          >
-            Close
-          </button>
         </div>
-      </div>
 
-      {/* Nested Profile Modal */}
-      {nestedProfile && (
-        <UserProfileModal
-          isOpen={!!nestedProfile}
-          onClose={() => setNestedProfile(null)}
-          userId={nestedProfile.userId}
-          displayName={nestedProfile.displayName}
-          avatarUrl={nestedProfile.avatarUrl}
-          isNested={true}
-        />
-      )}
+        {/* Nested Profile Modal */}
+        {nestedProfile && (
+          <UserProfileModal
+            isOpen={!!nestedProfile}
+            onClose={() => setNestedProfile(null)}
+            userId={nestedProfile.userId}
+            displayName={nestedProfile.displayName}
+            avatarUrl={nestedProfile.avatarUrl}
+            isNested={true}
+            onNavigateToGame={onNavigateToGame}
+
+          />
+        )}
+      </div>
     </div>
   );
 };
+
