@@ -1,5 +1,8 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
+import { loginSchema, type LoginFormData } from '@/lib/validationSchemas';
 import '../styles/modals.css';
 import '../styles/forms.css';
 import '../styles/buttons.css';
@@ -15,20 +18,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onClose, 
   onSwitchToRegister
 }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const login = useAppStore(state => state.login);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     setError('');
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(data.email, data.password);
+      reset();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -51,18 +61,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </button>
         <h2>Log In</h2>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="form-group mb-4">
             <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email')}
               className="form-input"
               autoComplete="email"
-              required
             />
+            {errors.email && (
+              <div className="error-message mt-1">
+                {errors.email.message}
+              </div>
+            )}
           </div>
 
           <div className="form-group mb-4">
@@ -70,12 +83,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register('password')}
               className="form-input"
               autoComplete="current-password"
-              required
             />
+            {errors.password && (
+              <div className="error-message mt-1">
+                {errors.password.message}
+              </div>
+            )}
           </div>
 
           {error && (

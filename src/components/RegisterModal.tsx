@@ -1,5 +1,8 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
+import { registerSchema, type RegisterFormData } from '@/lib/validationSchemas';
 import '../styles/modals.css';
 import '../styles/forms.css';
 import '../styles/buttons.css';
@@ -17,43 +20,38 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   onSwitchToLogin,
   isFromStats = false
 }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showMigrationInfo, setShowMigrationInfo] = useState(false);
   
-  const register = useAppStore(state => state.register);
+  const registerUser = useAppStore(state => state.register);
   const user = useAppStore(state => state.user);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = async (data: RegisterFormData) => {
     setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      await register(email, password, displayName || undefined);
+      await registerUser(data.email, data.password, data.username || undefined);
       
       // Show success message if migrating from guest
       if (user) {
         setShowMigrationInfo(true);
         setTimeout(() => {
+          reset();
           onClose();
         }, 2000);
       } else {
+        reset();
         onClose();
       }
     } catch (err) {
@@ -89,18 +87,22 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit(onSubmit)}>
               <div className="form-group mb-4">
-                <label htmlFor="displayName">Display Name</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  id="displayName"
+                  id="username"
                   type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  {...register('username')}
                   className="form-input"
-                  autoComplete="name"
+                  autoComplete="username"
                   placeholder="Optional"
                 />
+                {errors.username && (
+                  <div className="error-message mt-1">
+                    {errors.username.message}
+                  </div>
+                )}
               </div>
 
               <div className="form-group mb-4">
@@ -110,12 +112,15 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 <input
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   className="form-input"
                   autoComplete="email"
-                  required
                 />
+                {errors.email && (
+                  <div className="error-message mt-1">
+                    {errors.email.message}
+                  </div>
+                )}
               </div>
 
               <div className="form-group mb-4">
@@ -125,13 +130,15 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 <input
                   id="password"
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register('password')}
                   className="form-input"
                   autoComplete="new-password"
-                  required
-                  minLength={6}
                 />
+                {errors.password && (
+                  <div className="error-message mt-1">
+                    {errors.password.message}
+                  </div>
+                )}
               </div>
 
               <div className="form-group mb-4">
@@ -141,13 +148,15 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 <input
                   id="confirmPassword"
                   type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  {...register('confirmPassword')}
                   className="form-input"
                   autoComplete="new-password"
-                  required
-                  minLength={6}
                 />
+                {errors.confirmPassword && (
+                  <div className="error-message mt-1">
+                    {errors.confirmPassword.message}
+                  </div>
+                )}
               </div>
 
               {error && (

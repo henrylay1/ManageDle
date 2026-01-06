@@ -17,6 +17,9 @@ A daily puzzle hub to track, manage, and compare your daily Wordle-style games. 
 
 - **React 18** + **TypeScript**
 - **Vite** (build tool)
+- **React Router** (client-side routing)
 - **Zustand** (state management)
+- **TanStack Query** (server state management & caching)
+- **React Hook Form** + **Zod** (form handling & validation)
 - **Supabase** (auth, database, storage)
 - **Tailwind CSS** (styling)

@@ -8,6 +8,7 @@ import { UserRepository } from '@/repositories/UserRepository';
 import { StatsService } from '@/services/StatsService';
 import { authService, type AuthUser } from '@/services/authService';
 import { supabase } from '@/lib/supabase';
+import { invalidateGameStats, invalidateAllStats } from '@/lib/queryClient';
 import type { IStorageAdapter } from '@/types/storage';
 import { rateLimiter } from '@/utils/rateLimiter';
 import { handleStorageError, handleAuthError } from '@/utils/errorHandling';
@@ -162,9 +163,6 @@ interface AppState {
   // Records
   todayRecords: GameRecord[];
   
-  // Stats
-  statsCache: Map<string, GameStats>;
-  
   // Loading states
   isLoading: boolean;
   savingGames: Set<string>; // Track which games are currently being saved
@@ -197,7 +195,6 @@ interface AppState {
   
   // Stats actions
   getStats: (gameId: string) => Promise<GameStats>;
-  refreshStats: (gameId: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -209,7 +206,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   games: [],
   activeGames: [],
   todayRecords: [],
-  statsCache: new Map(),
   isLoading: true,
   newGameIds: new Set(),
 
@@ -472,7 +468,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       window.localStorage.removeItem('managedle:user');
       window.localStorage.removeItem('managedle:active_games');
 
-      // Reset in-memory cache/state
+      // Invalidate all TanStack Query caches
+      invalidateAllStats();
+
+      // Reset in-memory state
       set({
         user: null,
         authUser: null,
@@ -480,7 +479,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         games: [],
         activeGames: [],
         todayRecords: [],
-        statsCache: new Map(),
         isLoading: false,
       });
 
@@ -797,10 +795,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       // No need to reload here - caller will do it if needed
       // This eliminates the double-fetch issue
       
-      // Invalidate stats cache for this game
-      const statsCache = new Map(get().statsCache);
-      statsCache.delete(record.gameId);
-      set({ statsCache });
+      // Invalidate stats cache for this game via TanStack Query
+      invalidateGameStats(record.gameId);
     } finally {
       // Remove game from saving set
       const updatedSavingGames = new Set(get().savingGames);
@@ -837,10 +833,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         const todayRecords = await recordRepo.getTodayRecords(games);
         set({ todayRecords });
         
-        // Invalidate stats cache for this game
-        const statsCache = new Map(get().statsCache);
-        statsCache.delete(updatedRecord.gameId);
-        set({ statsCache });
+        // Invalidate stats cache for this game via TanStack Query
+        invalidateGameStats(updatedRecord.gameId);
       }
     } finally {
       // Remove game from saving set
@@ -872,11 +866,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const todayRecords = await recordRepo.getTodayRecords(games);
       set({ todayRecords });
 
-      // Invalidate stats cache for this game
+      // Invalidate stats cache for this game via TanStack Query
       if (recordToDelete) {
-        const statsCache = new Map(get().statsCache);
-        statsCache.delete(recordToDelete.gameId);
-        set({ statsCache });
+        invalidateGameStats(recordToDelete.gameId);
       }
     }
   },
@@ -893,43 +885,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   getStats: async (gameId) => {
-    const { user, isAuthenticated, authUser, statsCache } = get();
+    const { user, isAuthenticated, authUser } = get();
     if (!user) {
       throw new Error('User not initialized');
     }
     
-    // Check cache first
-    if (statsCache.has(gameId)) {
-      return statsCache.get(gameId)!;
-    }
-    
-    // Compute stats
+    // Compute stats directly - TanStack Query handles caching
     const userId = isAuthenticated && authUser ? authUser.id : user.localId;
     const recordRepo = new RecordRepository(currentStorage, userId);
     const statsService = new StatsService(recordRepo, userId);
     const game = get().games.find(g => g.gameId === gameId);
     const stats = await statsService.computeStats(gameId, game);
-    
-    // Cache the result
-    const newCache = new Map(statsCache);
-    newCache.set(gameId, stats);
-    set({ statsCache: newCache });
     
     return stats;
-  },
-
-  refreshStats: async (gameId) => {
-    const { user, isAuthenticated, authUser } = get();
-    if (!user) return;
-    
-    const userId = isAuthenticated && authUser ? authUser.id : user.localId;
-    const recordRepo = new RecordRepository(currentStorage, userId);
-    const statsService = new StatsService(recordRepo, userId);
-    const game = get().games.find(g => g.gameId === gameId);
-    const stats = await statsService.computeStats(gameId, game);
-    
-    const statsCache = new Map(get().statsCache);
-    statsCache.set(gameId, stats);
-    set({ statsCache });
   },
 }));

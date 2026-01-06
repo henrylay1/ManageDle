@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useAppStore } from '@/store/appStore';
-import { Game, GameStats } from '@/types/models';
+import { useGameStats } from '@/hooks/useUserStats';
+import { Game } from '@/types/models';
 import './Modal.css';
 import './Buttons.css';
 import './StatsModal.css';
@@ -11,25 +10,7 @@ interface StatsModalProps {
 }
 
 function StatsModal({ game, onClose }: StatsModalProps) {
-  const { getStats } = useAppStore();
-  const [stats, setStats] = useState<GameStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadStats = async () => {
-      setIsLoading(true);
-      try {
-        const gameStats = await getStats(game.gameId);
-        setStats(gameStats);
-      } catch (error) {
-        console.error('Error loading stats:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStats();
-  }, [game.gameId, getStats]);
+  const { data: stats, isLoading, error } = useGameStats(game.gameId);
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -150,9 +131,13 @@ function StatsModal({ game, onClose }: StatsModalProps) {
                 </div>
               )}
             </>
+          ) : error ? (
+            <div className="stats-error">
+              <p>Failed to load statistics: {error.message}</p>
+            </div>
           ) : (
             <div className="stats-error">
-              <p>Failed to load statistics</p>
+              <p>No statistics available</p>
             </div>
           )}
         </div>

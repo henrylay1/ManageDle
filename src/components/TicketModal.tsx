@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ticketSchema, type TicketFormData } from '@/lib/validationSchemas';
 import './Modal.css';
 import './Forms.css';
 import './Buttons.css';
@@ -10,14 +13,28 @@ interface TicketModalProps {
 }
 
 const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
-  const [type, setType] = useState('bug');
-  const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueUrl, setIssueUrl] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    watch,
+  } = useForm<TicketFormData>({
+    resolver: zodResolver(ticketSchema),
+    defaultValues: {
+      category: 'bug',
+      subject: '',
+      description: '',
+    },
+  });
+
+  const description = watch('description');
+
+  const onSubmit = async (data: TicketFormData) => {
     setError(null);
     setSubmitted(true);
 
@@ -35,33 +52,34 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type,
-          description,
+          type: data.category,
+          subject: data.subject,
+          description: data.description,
           userAgent: navigator.userAgent,
         }),
       });
 
       // Attempt to parse JSON; if that fails, fall back to plain text
-      let data: any = null;
+      let responseData: any = null;
       const raw = await response.text();
       try {
-        data = raw ? JSON.parse(raw) : null;
+        responseData = raw ? JSON.parse(raw) : null;
       } catch (e) {
-        data = null;
+        responseData = null;
       }
 
       if (!response.ok) {
-        const message = data?.error || data?.message || raw || 'Failed to submit ticket';
+        const message = responseData?.error || responseData?.message || raw || 'Failed to submit ticket';
         throw new Error(message);
       }
 
       // Success - prefer JSON `issueUrl`, otherwise use raw text
-      const issueLink = data?.issueUrl || raw || null;
+      const issueLink = responseData?.issueUrl || raw || null;
       setIssueUrl(issueLink);
       setTimeout(() => {
         setSubmitted(false);
-        setDescription('');
         setIssueUrl(null);
+        reset();
         onClose();
       }, 3000);
     } catch (err) {
@@ -85,25 +103,48 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
           <h2>Submit a Ticket</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <form className="ticket-form" onSubmit={handleSubmit}>
+        <form className="ticket-form" onSubmit={handleSubmit(onSubmit)}>
           <label>
             Type:
-            <select value={type} onChange={e => setType(e.target.value)} disabled={submitted}>
+            <select {...register('category')} disabled={submitted}>
               <option value="bug">🐞 Bug</option>
               <option value="feature">✨ Feature</option>
               <option value="question">❓ Question</option>
+              <option value="other">💬 Other</option>
             </select>
+            {errors.category && (
+              <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>
+                {errors.category.message}
+              </div>
+            )}
+          </label>
+          <label>
+            Subject:
+            <input
+              type="text"
+              {...register('subject')}
+              placeholder="Brief summary of your ticket"
+              disabled={submitted}
+            />
+            {errors.subject && (
+              <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>
+                {errors.subject.message}
+              </div>
+            )}
           </label>
           <label>
             Description:
             <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              required
-              placeholder="Describe your issue or suggestion..."
+              {...register('description')}
+              placeholder="Describe your issue or suggestion in detail..."
               rows={4}
               disabled={submitted}
             />
+            {errors.description && (
+              <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>
+                {errors.description.message}
+              </div>
+            )}
           </label>
           {error && (
             <div style={{ color: '#ef4444', padding: '8px', fontSize: '0.9rem' }}>
@@ -115,8 +156,8 @@ const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
               ✅ Ticket submitted! <a href={issueUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'underline' }}>View on GitHub</a>
             </div>
           )}
-          <button type="submit" className="btn-primary" disabled={submitted || !description.trim()}>
-            {submitted ? 'Submitting...' : 'Send Ticket'}
+          <button type="submit" className="btn-primary" disabled={isSubmitting || !description?.trim()}>
+            {isSubmitting ? 'Submitting...' : 'Send Ticket'}
           </button>
         </form>
       </div>
