@@ -16,28 +16,28 @@ export function PfpPicker({ pfps, onSelect, onClose }: PfpPickerProps) {
   }, [onClose]);
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)', zIndex: 9999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }} onClick={onClose}>
-      <div style={{
-        background: 'var(--card-bg, white)', borderRadius: 12, padding: 24,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.2)', minWidth: 320, maxWidth: 480
-      }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ marginBottom: 16 }}>Select a Profile Picture</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          {pfps.map((url: string, idx: number) => (
-            <img
-              key={url + '-' + idx}
-              src={url}
-              alt="Profile"
-              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '2px solid var(--border-color)' }}
-              onClick={() => onSelect(url)}
-            />
-          ))}
+    <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={onClose}>
+      <div className="modal-content pfp-picker-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Select a Profile Picture</h2>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <button style={{ marginTop: 24 }} onClick={onClose}>Cancel</button>
+        <div className="modal-body">
+          <div className="pfp-grid">
+            {pfps.map((url: string, idx: number) => (
+              <img
+                key={url + '-' + idx}
+                src={url}
+                alt="Profile"
+                className="pfp-option"
+                onClick={() => onSelect(url)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
       </div>
     </div>
   );

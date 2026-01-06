@@ -1,104 +1,10 @@
+/* App-specific styles - theme variables moved to src/styles/variables.css */
+
 .app {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   min-height: 100vh;
-}
-
-.app-header {
-  text-align: center;
-  margin-bottom: 3rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid #333;
-}
-
-.app-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.app-header p {
-  font-size: 1.1rem;
-  color: #888;
-}
-
-.app-main {
-  animation: fadeIn 0.5s ease-in;
-}
-
-.app-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  gap: 1rem;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #333;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-
-
-:root {
-  --button-bg-small: var(--button-bg);
-  --button-text: #fff;
-  --button-bg: #f59e0b;
-  --button-bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --button-bg-signup: #3b82f6;
-  --button-bg-login: #fff;
-  --button-bg-account: #3b82f6;
-  --button-bg-leaderboard: #f59e0b;
-  --background: #f9f9f7;
-  --background-alt: #f4f3ef;
-  --surface: #efeee8;
-  --surface-secondary: #eae8e0;
-  --surface-menu: #e5e3d9;
-  --text-primary: #000;
-  --text-secondary: #484b6a;
-  --button-text: #000000;
-  --border: #e5e3d9;
-  --accent: #667eea;
-  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-[data-theme="dark"] {
-  --button-bg-small: var(--button-bg);
-  --button-bg: #2a2a2a;
-  --button-bg-primary: #2a2a2a;
-  --button-bg-signup: #2a2a2a;
-  --button-bg-login: #2a2a2a;
-  --button-bg-account: #2a2a2a;
-  --button-bg-leaderboard: #2a2a2a;
-  --background: #18181b;
-  --surface: #23232a;
-  --surface-menu: #23232a;
-  --text-primary: #f3f3f3;
-  --text-secondary: #aaa;
-  --button-text: #ffffff;
-  --border: #333;
-  --accent: #667eea;
-  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-
 }
 
 body, .app {
@@ -138,13 +44,4 @@ body, .app {
   justify-content: center;
   min-height: 100vh;
   gap: 1rem;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
 }

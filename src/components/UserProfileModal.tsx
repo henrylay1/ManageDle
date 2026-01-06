@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { socialService } from '@/services/socialService';
+import { FollowButton } from './FollowButton';
 import './UserProfileModal.css';
 
 interface UserGameStats {
@@ -11,6 +13,13 @@ interface UserGameStats {
   playStreak: number;
   winStreak: number;
   maxWinStreak: number;
+}
+
+interface SocialConnection {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  isFriend: boolean; // mutual follow
 }
 
 interface UserProfileModalProps {
@@ -31,7 +40,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [gameStats, setGameStats] = useState<UserGameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  // ...existing code...
+  const [followersCount, setFollowersCount] = useState(0);
+  const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
+  const [nestedProfile, setNestedProfile] = useState<{ userId: string; displayName: string; avatarUrl: string | null } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -44,6 +55,34 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setError('');
 
     try {
+      // Fetch follower count
+      const followerCount = await socialService.getFollowersCount(userId);
+      setFollowersCount(followerCount);
+
+      // Fetch following list
+      const followingList = await socialService.getFollowingList(userId, 50, 0);
+      console.log('[UserProfileModal] Following list:', followingList);
+      
+      // Fetch mutual friends to determine friend status
+      const mutualFriends = await socialService.getMutualFriends(userId, 50, 0);
+      console.log('[UserProfileModal] Mutual friends:', mutualFriends);
+      const mutualFriendIds = new Set(mutualFriends.map((f: any) => f.id));
+      console.log('[UserProfileModal] Mutual friend IDs:', Array.from(mutualFriendIds));
+      
+      // Build social connections list
+      const connections: SocialConnection[] = followingList.map((user: any) => {
+        const isFriend = mutualFriendIds.has(user.id);
+        console.log(`[UserProfileModal] User ${user.display_name} (${user.id}) - isFriend: ${isFriend}`);
+        return {
+          id: user.id,
+          display_name: user.display_name,
+          avatar_url: user.avatar_url,
+          isFriend,
+        };
+      });
+      
+      setSocialConnections(connections);
+
       // Fetch user's game records
       const { data: recordsData, error: recordsError } = await supabase
         .from('game_records')
@@ -155,7 +194,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           )}
           <div>
             <h2 className="user-profile-name">{displayName}</h2>
+            <div className="user-profile-stats-header">
+              <span className="user-profile-followers">👥 {followersCount} followers</span>
+            </div>
           </div>
+          <FollowButton userId={userId} displayName={displayName} />
         </div>
 
         {/* Games List */}
@@ -210,6 +253,52 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               ))}
             </div>
           )}
+
+          {/* Friends & Following Section */}
+          {!isLoading && (
+            <div className="user-profile-social-section">
+              <h3 className="user-profile-social-title">Friends & Following</h3>
+              {socialConnections.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#6b7280', padding: '1rem' }}>No following</p>
+              ) : (
+                <div className="user-profile-social-list">
+                  {socialConnections.map(connection => {
+                  const isImage = typeof connection.avatar_url === 'string' && 
+                    (connection.avatar_url.startsWith('http://') || connection.avatar_url.startsWith('https://'));
+                  return (
+                    <div key={connection.id} className="user-profile-social-item">
+                      <button
+                        onClick={() => setNestedProfile({
+                          userId: connection.id,
+                          displayName: connection.display_name || 'Unknown',
+                          avatarUrl: connection.avatar_url,
+                        })}
+                        className="user-profile-social-avatar-button"
+                        title={`View ${connection.display_name || 'Unknown'}'s profile`}
+                      >
+                        {isImage ? (
+                          <img
+                            src={connection.avatar_url!}
+                            alt={connection.display_name || 'User'}
+                            className="user-profile-social-avatar"
+                          />
+                        ) : (
+                          <div className="user-profile-social-avatar-placeholder">👤</div>
+                        )}
+                      </button>
+                      <div className="user-profile-social-info">
+                        <span className="user-profile-social-name">{connection.display_name || 'Unknown'}</span>
+                        <span className={`user-profile-social-badge ${connection.isFriend ? 'friend' : 'following'}`}>
+                          {connection.isFriend ? '👥 Friend' : '➡️ Following'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Close Button */}
@@ -222,6 +311,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Nested Profile Modal */}
+      {nestedProfile && (
+        <UserProfileModal
+          isOpen={!!nestedProfile}
+          onClose={() => setNestedProfile(null)}
+          userId={nestedProfile.userId}
+          displayName={nestedProfile.displayName}
+          avatarUrl={nestedProfile.avatarUrl}
+        />
+      )}
     </div>
   );
 };

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
-import './Modal.css';
-import './Forms.css';
-import './Buttons.css';
-import './AuthModal.css';
+import '../styles/modals.css';
+import '../styles/forms.css';
+import '../styles/buttons.css';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -41,84 +40,46 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        padding: '1.5rem',
-        width: '100%',
-        maxWidth: '28rem',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        color: 'black',
-        position: 'relative',
-      }}>
-        {/* Close (X) button top right */}
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="auth-modal">
         <button
           onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            background: 'none',
-            border: 'none',
-            color: '#c00',
-            fontSize: '1.5rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            zIndex: 10,
-          }}
+          className="modal-close"
           aria-label="Close"
         >
           ×
         </button>
-        <h2 className="text-2xl font-bold mb-4">Log In</h2>
+        <h2>Log In</h2>
         
         <form onSubmit={handleSubmit}>
-          <div className="mb-4 form-field-row grid grid-cols-2 gap-x-4 gap-y-2 items-center">
-            <label className="text-sm font-medium text-left" htmlFor="email">
-              Email
-            </label>
+          <div className="form-group mb-4">
+            <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+              className="form-input"
               autoComplete="email"
               required
             />
           </div>
 
-          <div className="mb-4 form-field-row grid grid-cols-2 gap-x-4 gap-y-2 items-center">
-            <label className="text-sm font-medium text-left" htmlFor="password">
-              Password
-            </label>
+          <div className="form-group mb-4">
+            <label htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="form-input px-3 py-2 bg-white border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ backgroundColor: 'white', color: 'black', marginLeft: 'auto' }}
+              className="form-input"
               autoComplete="current-password"
               required
             />
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            <div className="error-message mb-4">
               {error}
             </div>
           )}
@@ -126,19 +87,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-500 text-white py-1.5 px-3 rounded-md hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            style={{ fontSize: '1rem', marginTop: '0.5rem' }}
+            className="btn-primary w-full"
           >
             {isLoading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="auth-modal-footer">
+          <p>
             Don't have an account?{' '}
             <button
               onClick={onSwitchToRegister}
-              className="text-blue-500 hover:underline"
+              className="btn-link"
             >
               Sign up
             </button>

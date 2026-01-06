@@ -1,31 +1,11 @@
-.leaderboard-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
+/* Leaderboard-specific styles - common modal/button styles moved to shared files */
 
-.leaderboard-container {
-  background-image: repeating-radial-gradient(circle, transparent 0%, transparent 10%, rgba(54, 89, 219, 0.33) 10%, rgba(54, 89, 219, 0.33) 17%), linear-gradient(to right, #5b7cfa, #3659db);
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 56rem;
-  max-height: 80vh;
+.leaderboard-content {
+  padding: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  color: black;
-}
-
-.leaderboard-container h2 {
-  font-size: 2rem;
+  gap: 1rem;
+  flex: 1;
 }
 
 .leaderboard-table {
@@ -35,9 +15,9 @@
 }
 
 .leaderboard-table thead {
-
   position: sticky;
   top: 0;
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .leaderboard-table th {
@@ -60,7 +40,7 @@
   text-align: center;
 }
 
-.leaderboard-table tbody{
+.leaderboard-table tbody {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -68,7 +48,6 @@
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
 }
-
 
 .leaderboard-table td:nth-child(2) {
   width: 50%;
@@ -81,7 +60,7 @@
   text-align: center;
 }
 
-
+/* Player button with avatar */
 .leaderboard-player-button {
   background: radial-gradient(circle, #C1666B, #8B3A3F);
   display: flex;
@@ -92,18 +71,38 @@
   cursor: pointer;
   border: none;
   font-weight: 500;
-  box-shadow : 0 5px 7px -1px rgba(51, 51, 51, 0.23);
+  box-shadow: 0 5px 7px -1px rgba(51, 51, 51, 0.23);
+  transition: transform 0.15s cubic-bezier(0.7, 0.98, 0.86, 0.98), 
+              box-shadow 0.25s cubic-bezier(0.7, 0.98, 0.86, 0.98);
 }
 
 .leaderboard-player-button:hover {
-    transition: transform 0.15s 
-cubic-bezier(0.7, 0.98, 0.86, 0.98), box-shadow 0.25s 
-cubic-bezier(0.7, 0.98, 0.86, 0.98);
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 
 .leaderboard-player-button:active {
   transform: scale(0.95);
+}
+
+/* Avatar with gradient border */
+.leaderboard-player-button .leaderboard-avatar {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff7a18 0%, #ff944d 50%, #ffc58f 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaderboard-player-button .leaderboard-avatar img,
+.leaderboard-player-button .leaderboard-avatar > * {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid var(--card-bg, #fff);
+  box-sizing: border-box;
 }
 
 .leaderboard-avatar {
@@ -115,9 +114,29 @@ cubic-bezier(0.7, 0.98, 0.86, 0.98);
   background: black;
 }
 
-
-
-.leaderboard-container {
-  font-weight: 400;
+.leaderboard-avatar-placeholder {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  color: #9ca3af;
 }
+
+.leaderboard-player-name {
+  color: white;
+}
+
+.leaderboard-player-name.current-user {
+  font-weight: bold;
+}
+
+.leaderboard-table tr.current-user {
+  background-color: rgba(59, 130, 246, 0.1);
+  font-weight: 600;
+}
+
 

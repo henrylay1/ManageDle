@@ -1,0 +1,159 @@
+/* ===========================================
+   Base Styles & Resets
+   =========================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-primary);
+  background-color: var(--background);
+  min-width: 320px;
+  min-height: 100vh;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ===========================================
+   Animations
+   =========================================== */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInSlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* ===========================================
+   Utility Classes
+   =========================================== */
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner--small {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
+}
+
+/* Text utilities */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.text-sm { font-size: 0.875rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+/* Spacing utilities */
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+
+/* Display utilities */
+.w-full { width: 100%; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+
+/* Info Banner */
+.info-banner {
+  background-color: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  color: #1565c0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Error/Success messages */
+.error-message {
+  padding: 0.75rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.success-message {
+  padding: 0.75rem;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+/* Empty States */
+.empty-state,
+.stats-loading,
+.stats-error,
+.no-stats {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+.stats-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}

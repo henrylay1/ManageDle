@@ -32,6 +32,26 @@
   gap: 1rem;
 }
 
+.user-profile-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.user-profile-stats-header {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+}
+
+.user-profile-followers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .user-profile-avatar {
   width: 4rem;
   height: 4rem;
@@ -56,6 +76,11 @@
 
 .user-profile-avatar-link {
   display: inline-block;
+  transition: transform 0.15s cubic-bezier(0.7, 0.98, 0.86, 0.98);
+}
+
+.user-profile-avatar-link:hover {
+  transform: scale(1.1);
 }
 
 .user-profile-name {
@@ -119,4 +144,153 @@
   font-weight: 700;
   font-size: 1rem;
   display: block;
+}
+/* Friends & Following Section */
+.user-profile-social-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.user-profile-social-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.user-profile-social-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.user-profile-social-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+  background: white;
+}
+
+.user-profile-social-item:hover {
+  background-color: #f9fafb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-profile-social-avatar-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.7, 0.98, 0.86, 0.98);
+}
+
+.user-profile-social-avatar-button:hover {
+  transform: scale(1.1);
+}
+
+.user-profile-social-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+/* Orange gradient border for clickable avatars in modal */
+.user-profile-avatar-link {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff7a18 0%, #ff944d 50%, #ffc58f 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  overflow: hidden;
+}
+
+.user-profile-avatar-link img {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  border-radius: 50%;
+  display: block;
+  border: 2px solid #ffffff;
+  box-sizing: border-box;
+}
+
+.user-profile-social-avatar-button {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff7a18 0%, #ff944d 50%, #ffc58f 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+}
+
+.user-profile-social-avatar-button .user-profile-social-avatar {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  display: block;
+}
+
+.user-profile-social-avatar-placeholder {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  border: 2px solid #d1d5db;
+}
+
+.user-profile-social-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.user-profile-social-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+}
+
+.user-profile-social-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.user-profile-social-badge.friend {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.user-profile-social-badge.following {
+  background: #dbeafe;
+  color: #1e40af;
 }

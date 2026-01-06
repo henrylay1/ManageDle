@@ -1,16 +1,17 @@
 # ManageDle Change Log
 
-## [V1.0.1] - 2026-01-05
+## [V1.0.1] - 2026-01-06
 Polish and deployment improvements.
 
 ### New Features
 - **In-App Bug Reporting:** Submit bug reports, feature requests, and questions directly from the app. Your feedback creates GitHub issues automatically.
+- **Social Features:** Follow users, build your network, filter leaderboards by followers, and see friend badges for mutual connections.
+- **Friends & Following:** View friends and following lists on profile pages.
 
 ### Improvements
-- Improved changelog display with better formatting and live updates from the repository.
-- Faster loading and improved reliability with migration to Vercel hosting.
-- Performance optimizations and code cleanup.
-
+- **Unified CSS Architecture:** Consolidated styles into centralized system (variables, base, buttons, forms, modals)
+- **Modal Styling Consistency:** All modals now use unified close button style (X in top-right corner).
+- **Leaderboard Enhancements:** Added following/global toggle filter, improved button groups styling.
 
 ## [V1.0.0] - 2026-01-04
 A daily puzzle hub to track, manage, and compare your daily puzzle games.

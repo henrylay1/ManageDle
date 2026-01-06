@@ -130,13 +130,15 @@
   border-color: #667eea;
 }
 
-.form-group {
+/* Note: .form-group base styles are in src/styles/forms.css */
+/* These are ScoreEntryModal-specific overrides */
+.score-entry-form .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group label {
+.score-entry-form .form-group label {
   font-weight: 500;
   font-size: 0.95rem;
   color: #ccc;
@@ -148,13 +150,15 @@
   width: 100%;
 }
 
-.checkbox-group {
+/* Note: .checkbox-group and .checkbox-label base styles are in src/styles/forms.css */
+/* These are ScoreEntryModal-specific overrides */
+.score-entry-form .checkbox-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.checkbox-label {
+.score-entry-form .checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -166,11 +170,11 @@
   user-select: none;
 }
 
-.checkbox-label:hover {
+.score-entry-form .checkbox-label:hover {
   background: #333;
 }
 
-.checkbox-label input[type="checkbox"] {
+.score-entry-form .checkbox-label input[type="checkbox"] {
   width: 20px;
   height: 20px;
   cursor: pointer;
@@ -183,12 +187,12 @@
   transition: background 0.2s, border-color 0.2s;
 }
 
-.checkbox-label input[type="checkbox"]:checked {
+.score-entry-form .checkbox-label input[type="checkbox"]:checked {
   background-color: #667eea;
   border-color: #667eea;
 }
 
-.checkbox-label input[type="checkbox"]:checked::after {
+.score-entry-form .checkbox-label input[type="checkbox"]:checked::after {
   content: '';
   display: block;
   width: 12px;
@@ -201,12 +205,14 @@
 }
 
 
-.checkbox-label span {
+.score-entry-form .checkbox-label span {
   flex: 1;
   font-size: 0.95rem;
 }
 
-.modal-actions {
+/* Note: .modal-actions base styles are in src/styles/modals.css */
+/* These are ScoreEntryModal-specific overrides */
+.score-entry-form .modal-actions {
   display: flex;
   gap: 1rem;
   padding: 1.5rem;
@@ -218,25 +224,23 @@
   margin-top: auto;
 }
 
-.modal-actions button {
+.score-entry-form .modal-actions button {
   flex: 1;
 }
 
-.btn-secondary {
+/* Note: .btn-secondary base styles are in src/styles/buttons.css */
+/* These are ScoreEntryModal-specific overrides */
+.score-entry-form .btn-secondary {
   background: #2a2a2a;
   color: #ccc;
 }
 
-.btn-secondary:hover {
+.score-entry-form .btn-secondary:hover {
   background: #333;
 }
 
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary:disabled {
+.score-entry-form .btn-secondary:disabled,
+.score-entry-form .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -355,12 +359,12 @@
 }
 
 @media (max-width: 640px) {
-  .modal-content {
-    max-height: 100vh;
-    border-radius: 0;
+  /* Note: .modal-content and .modal-actions base responsive styles are in src/styles/modals.css */
+  .score-entry-form .checkbox-label {
+    background: #f9f9f9;
   }
   
-  .modal-actions {
-    flex-direction: column-reverse;
+  .score-entry-form .checkbox-label:hover {
+    background: #f0f0f0;
   }
 }

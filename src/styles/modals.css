@@ -1,0 +1,197 @@
+/* ===========================================
+   Modal Styles - Consolidated
+   =========================================== */
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+/* High z-index for auth modals */
+.modal-overlay.auth-overlay {
+  z-index: 9999;
+}
+
+/* Leaderboard specific overlay */
+.modal-overlay.leaderboard-overlay {
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Modal Content */
+.modal-content {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp var(--transition-slow) ease-out;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  position: relative;
+}
+
+/* Leaderboard specific styling */
+.modal-content.leaderboard-modal {
+  background-image: repeating-radial-gradient(circle, transparent 0%, transparent 10%, rgba(54, 89, 219, 0.33) 10%, rgba(54, 89, 219, 0.33) 17%), 
+                    linear-gradient(to right, #5b7cfa, #3659db);
+  max-width: 56rem;
+  max-height: 80vh;
+  padding: 1.5rem;
+  color: black;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 2px solid var(--surface-border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: bold;
+}
+
+/* Auth and Leaderboard modal headers */
+.auth-modal .modal-header,
+.leaderboard-modal .modal-header {
+  background: transparent;
+  border-bottom: none;
+  padding: 0 0 var(--spacing-lg) 0;
+  position: relative;
+}
+
+.leaderboard-modal .modal-header h2 {
+  font-size: 2rem;
+}
+
+/* Modal Body */
+.modal-body {
+  padding: var(--spacing-lg);
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Modal Actions/Footer */
+.modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-top: 2px solid var(--surface-border);
+  justify-content: flex-end;
+  background: var(--surface);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* Modal Variants */
+.stats-modal {
+  max-width: 700px;
+}
+
+.ticket-modal {
+  min-width: 320px;
+  max-width: 400px;
+}
+
+.score-entry-modal {
+  max-width: 650px;
+}
+
+/* Auth Modal (Login/Register) */
+.auth-modal {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  width: 100%;
+  max-width: 28rem;
+  box-shadow: var(--shadow-lg);
+  color: black;
+  position: relative;
+  animation: slideUp var(--transition-slow) ease-out;
+}
+
+.auth-modal h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+/* Auth Modal Footer */
+.auth-modal-footer {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* PFP Picker Modal */
+.pfp-picker-modal {
+  max-width: 480px;
+}
+
+.pfp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  justify-content: center;
+}
+
+.pfp-option {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  transition: border-color var(--transition-normal), transform var(--transition-normal);
+}
+
+.pfp-option:hover {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-content {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .auth-modal {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+}
