@@ -9,9 +9,8 @@ Polish and deployment improvements.
 - **Friends & Following:** View friends and following lists on profile pages.
 
 ### Improvements
-- **Unified CSS Architecture:** Consolidated styles into centralized system (variables, base, buttons, forms, modals)
-- **Modal Styling Consistency:** All modals now use unified close button style (X in top-right corner).
 - **Leaderboard Enhancements:** Added following/global toggle filter, improved button groups styling.
+- **General QOL:** CSS and code cleanup
 
 ## [V1.0.0] - 2026-01-04
 A daily puzzle hub to track, manage, and compare your daily puzzle games.
