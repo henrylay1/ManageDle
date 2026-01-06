@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { socialService } from '@/services/socialService';
 import { FollowButton } from './FollowButton';
+import { validateStreaks } from '@/utils/helpers';
 import './UserProfileModal.css';
 
 interface UserGameStats {
@@ -28,6 +29,7 @@ interface UserProfileModalProps {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  isNested?: boolean;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -36,6 +38,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   userId,
   displayName,
   avatarUrl,
+  isNested = false,
 }) => {
   const [gameStats, setGameStats] = useState<UserGameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -86,7 +89,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       // Fetch user's game records
       const { data: recordsData, error: recordsError } = await supabase
         .from('game_records')
-        .select('game_id, failed, metadata')
+        .select('game_id, failed, metadata, created_at')
         .eq('user_id', userId);
 
       if (recordsError) {
@@ -111,8 +114,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       const latestRecordsMap = new Map<string, any>(); // Track latest record per game
       
       (recordsData || []).forEach(record => {
-        // Track latest record for this game
-        if (!latestRecordsMap.has(record.game_id)) {
+        // Track latest record for this game (most recent by createdAt)
+        const existingLatest = latestRecordsMap.get(record.game_id);
+        if (!existingLatest || record.created_at > existingLatest.created_at) {
           latestRecordsMap.set(record.game_id, record);
         }
         
@@ -127,12 +131,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       });
 
       // Update play/win/max-win streaks from latest records (stored in record.metadata)
+      // Use shared utility to validate streaks based on record date
       latestRecordsMap.forEach((latestRecord, gameId) => {
         const stat = statsMap.get(gameId);
-        if (stat && latestRecord.metadata) {
-          stat.playStreak = latestRecord.metadata.playstreak ?? 0;
-          stat.winStreak = latestRecord.metadata.winstreak ?? 0;
-          stat.maxWinStreak = latestRecord.metadata.maxWinstreak ?? 0;
+        if (stat) {
+          const { playStreak, winStreak, maxWinStreak } = validateStreaks(
+            latestRecord.created_at,
+            latestRecord.metadata
+          );
+          
+          stat.playStreak = playStreak;
+          stat.winStreak = winStreak;
+          stat.maxWinStreak = maxWinStreak;
         }
       });
 
@@ -167,7 +177,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const isImage = typeof avatarUrl === 'string' && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
   return (
-    <div className="user-profile-backdrop" onClick={onClose}>
+    <div className="user-profile-backdrop" onClick={onClose} style={isNested ? { background: 'transparent' } : undefined}>
       <div className="user-profile-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="user-profile-header">
@@ -320,6 +330,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           userId={nestedProfile.userId}
           displayName={nestedProfile.displayName}
           avatarUrl={nestedProfile.avatarUrl}
+          isNested={true}
         />
       )}
     </div>

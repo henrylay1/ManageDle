@@ -1,6 +1,6 @@
 import { GameRecord, GameStats, Game } from '@/types/models';
 import { RecordRepository } from '@/repositories/RecordRepository';
-import { getTimestamp, getYesterdayDate, getDatePart } from '@/utils/helpers';
+import { getTimestamp, getDatePart, validateStreaks } from '@/utils/helpers';
 
 /**
  * Service for computing game statistics
@@ -173,29 +173,13 @@ export class StatsService {
     const sortedRecords = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const latestRecord = sortedRecords[0];
 
-    // Extract date part (YYYY-MM-DD) from the record date
-    const recordDatePart = getDatePart(latestRecord.createdAt);
-    const yesterday = getYesterdayDate();
+    // Use shared utility to validate streaks based on record date
+    const { playStreak, winStreak, maxWinStreak, streakAtRisk } = validateStreaks(
+      latestRecord.createdAt,
+      latestRecord.metadata
+    );
 
-    // Get streaks from metadata
-    let playstreak = latestRecord.metadata?.playstreak ?? 0;
-    let winstreak = latestRecord.metadata?.winstreak ?? 0;
-    const maxWinstreak = latestRecord.metadata?.maxWinstreak ?? 0;
-
-    // Determine streak status based on record date
-    let streakAtRisk = false;
-    
-    if (recordDatePart === yesterday) {
-      // Latest record is from yesterday - streaks are at risk (need to play today to maintain)
-      streakAtRisk = true;
-    } else if (recordDatePart < yesterday) {
-      // Latest record is 2 or more days old - streaks are broken
-      playstreak = 0;
-      winstreak = 0;
-    }
-    // If recordDatePart >= today, show streaks normally
-
-    return { playstreak, winstreak, maxWinstreak, streakAtRisk };
+    return { playstreak: playStreak, winstreak: winStreak, maxWinstreak: maxWinStreak, streakAtRisk };
   }
   /**
    * Generate default score distribution config from scoreTypes

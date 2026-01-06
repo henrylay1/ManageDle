@@ -70,3 +70,38 @@ export const getYesterdayDate = (): string => {
   yesterday.setDate(yesterday.getDate() - 1);
   return getDatePart(yesterday.toISOString());
 };
+
+/**
+ * Validate and adjust streaks based on the latest record date
+ * @param recordDate - ISO timestamp or YYYY-MM-DD date of the latest record
+ * @param metadata - Record metadata containing streak values
+ * @returns Object with validated playStreak, winStreak, maxWinStreak, and streakAtRisk flag
+ */
+export const validateStreaks = (
+  recordDate: string,
+  metadata?: { playstreak?: number; winstreak?: number; maxWinstreak?: number }
+): { playStreak: number; winStreak: number; maxWinStreak: number; streakAtRisk: boolean } => {
+  if (!metadata) {
+    return { playStreak: 0, winStreak: 0, maxWinStreak: 0, streakAtRisk: false };
+  }
+
+  let playStreak = metadata.playstreak ?? 0;
+  let winStreak = metadata.winstreak ?? 0;
+  const maxWinStreak = metadata.maxWinstreak ?? 0;
+
+  const recordDatePart = getDatePart(recordDate);
+  const yesterday = getYesterdayDate();
+  let streakAtRisk = false;
+
+  if (recordDatePart === yesterday) {
+    // Latest record is from yesterday - streaks are at risk (need to play today to maintain)
+    streakAtRisk = true;
+  } else if (recordDatePart < yesterday) {
+    // Latest record is 2 or more days old - streaks are broken
+    playStreak = 0;
+    winStreak = 0;
+  }
+  // If recordDatePart >= today, show streaks normally
+
+  return { playStreak, winStreak, maxWinStreak, streakAtRisk };
+};
