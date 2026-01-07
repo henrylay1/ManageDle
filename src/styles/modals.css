@@ -13,19 +13,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-overlay);
   padding: var(--spacing-md);
   animation: fadeIn var(--transition-normal) ease-out;
 }
 
 /* High z-index for auth modals */
 .modal-overlay.auth-overlay {
-  z-index: 9999;
+  z-index: var(--z-auth-overlay);
 }
 
 /* Leaderboard specific overlay */
 .modal-overlay.leaderboard-overlay {
-  z-index: 9999;
+  z-index: calc(var(--z-overlay) + 100);
   background-color: rgba(0, 0, 0, 0.5);
 }
 
@@ -64,7 +64,7 @@
   position: sticky;
   top: 0;
   background: var(--surface);
-  z-index: 1;
+  z-index: var(--z-sticky);
 }
 
 .modal-header h2 {
@@ -197,4 +197,12 @@
     margin: 1rem;
     max-width: calc(100% - 2rem);
   }
+}
+/* Tooltip and Overlay Classes */
+.tooltip-with-arrow {
+  z-index: var(--z-tooltip);
+}
+
+.account-menu-overlay {
+  z-index: var(--z-auth-overlay);
 }

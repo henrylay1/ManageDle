@@ -158,9 +158,10 @@
   gap: 0.5rem;
 }
 
-/* Tooltip wrapper inside the table should render above other elements */
+/* Tooltip wrapper inside the table should render above other elements but
+   stay beneath modal overlays (modals use z-index: 1000). */
 .game-icon-tooltip-wrapper {
-  z-index: 2000;
+  z-index: 900;
 }
 
 .user-profile-game-cell:not(:first-child) {

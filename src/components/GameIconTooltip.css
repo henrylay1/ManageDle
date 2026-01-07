@@ -23,7 +23,7 @@
   border-radius: 6px;
   font-size: 0.85rem;
   white-space: nowrap;
-  z-index: 1000;
+  z-index: 900;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
@@ -48,8 +48,8 @@
   border-radius: 6px;
   font-size: 0.85rem;
   white-space: nowrap;
-  /* Ensure tooltip is above modal overlays (e.g., z-index 9999) */
-  z-index: 11000;
+  /* Keep tooltip beneath modal overlays so modals block tooltips */
+  z-index: 900;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   pointer-events: none;
 }

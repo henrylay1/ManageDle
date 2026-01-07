@@ -7,6 +7,7 @@ import ActivityHeatmap from './ActivityHeatmap';
 import { PfpPicker } from './PfpPicker';
 import { UserProfileModal } from './UserProfileModal';
 import './ProfilePage.css';
+import '../styles/buttons.css';
 
 interface SocialConnection {
   id: string;
