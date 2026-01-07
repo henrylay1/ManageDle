@@ -14,6 +14,7 @@ interface ScoreEntryModalProps {
   game: Game;
   existingRecord?: GameRecord;
   onClose: () => void;
+  onSave?: () => void;
 }
 
 // Dynamic score label based on game's scoreTypes - returns the first score type key capitalized
@@ -44,7 +45,7 @@ function getMaxFromScoreTypes(game: Game, puzzleKey: string, scoreTypeKey?: stri
   return typeof maxValue === 'number' && maxValue > 0 ? maxValue : undefined;
 }
 
-function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps) {
+function ScoreEntryModal({ game, existingRecord, onClose, onSave }: ScoreEntryModalProps) {
   const { addRecord, updateRecord, loadTodayRecords } = useAppStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
@@ -597,6 +598,11 @@ function ScoreEntryModal({ game, existingRecord, onClose }: ScoreEntryModalProps
       // Close modal immediately for better UX (optimistic update)
       onClose();
       setIsSubmitting(false);
+
+      // Call onSave callback if provided (for consecutive play mode)
+      if (onSave) {
+        onSave();
+      }
 
       // Save in background
       if (existingRecord) {

@@ -134,6 +134,11 @@ function Dashboard() {
   // Todo sort state (temporary, not persisted)
   const [todoSortActive, setTodoSortActive] = useState(false);
 
+  // Consecutive play mode state
+  const [consecutivePlayMode, setConsecutivePlayMode] = useState(false);
+  const [consecutiveGames, setConsecutiveGames] = useState<Game[]>([]);
+  const [consecutiveIndex, setConsecutiveIndex] = useState(0);
+
   const handlePlayGame = (game: Game) => {
     window.open(game.url, '_blank');
     // Open log score modal after opening game
@@ -444,6 +449,73 @@ function Dashboard() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
+  // Consecutive play mode handlers
+  const startConsecutivePlay = () => {
+    // Get all incomplete games in current order
+    const displayedGames = todoSortActive
+      ? (() => {
+          const incompleteGames = localBaseOrder.filter(g => !getTodayRecord(g.gameId));
+          const completedGames = localBaseOrder.filter(g => !!getTodayRecord(g.gameId));
+          return [...incompleteGames, ...completedGames];
+        })()
+      : localBaseOrder;
+
+    const incompleteGames = displayedGames.filter(g => !getTodayRecord(g.gameId));
+
+    if (incompleteGames.length === 0) {
+      alert('All games are complete! 🎉');
+      return;
+    }
+
+    setConsecutiveGames(incompleteGames);
+    setConsecutiveIndex(0);
+    setConsecutivePlayMode(true);
+
+    // Start with first game
+    const firstGame = incompleteGames[0];
+    window.open(firstGame.url, '_blank');
+    setSelectedGame(firstGame);
+    setShowScoreEntry(true);
+  };
+
+  const exitConsecutivePlay = () => {
+    setConsecutivePlayMode(false);
+    setConsecutiveGames([]);
+    setConsecutiveIndex(0);
+  };
+
+  const handleConsecutiveSave = () => {
+    // Move to next game
+    const nextIndex = consecutiveIndex + 1;
+
+    if (nextIndex >= consecutiveGames.length) {
+      // All games complete!
+      alert('All games completed! 🎉');
+      exitConsecutivePlay();
+      return;
+    }
+
+    setConsecutiveIndex(nextIndex);
+    const nextGame = consecutiveGames[nextIndex];
+
+    // Small delay for better UX
+    setTimeout(() => {
+      window.open(nextGame.url, '_blank');
+      setSelectedGame(nextGame);
+      setShowScoreEntry(true);
+    }, 300);
+  };
+
+  const handleScoreEntryClose = () => {
+    setShowScoreEntry(false);
+    setSelectedGame(null);
+
+    // If in consecutive mode and modal closed without saving, exit mode
+    if (consecutivePlayMode) {
+      exitConsecutivePlay();
+    }
+  };
+
   // Set theme on mount
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -521,6 +593,22 @@ function Dashboard() {
                 title={todoSortActive ? 'Show custom order' : 'Sort incomplete games first'}
               >
                 {todoSortActive ? '✓ Todo' : '📋 Todo'}
+              </button>
+            )}
+
+            {/* Consecutive Play Button */}
+            {activeGames.length > 1 && !organizeMode && (
+              <button
+                className={`btn-primary ${consecutivePlayMode ? 'active' : ''}`}
+                onClick={startConsecutivePlay}
+                disabled={consecutivePlayMode}
+                title="Play all incomplete games in sequence"
+                style={{
+                  background: consecutivePlayMode ? '#10b981' : undefined,
+                  cursor: consecutivePlayMode ? 'not-allowed' : undefined,
+                }}
+              >
+                {consecutivePlayMode ? `▶️ Playing (${consecutiveIndex + 1}/${consecutiveGames.length})` : '▶️ Play All'}
               </button>
             )}
             
@@ -971,10 +1059,8 @@ function Dashboard() {
         <ScoreEntryModal
           game={selectedGame}
           existingRecord={getTodayRecord(selectedGame.gameId)}
-          onClose={() => {
-            setShowScoreEntry(false);
-            setSelectedGame(null);
-          }}
+          onClose={handleScoreEntryClose}
+          onSave={consecutivePlayMode ? handleConsecutiveSave : undefined}
         />
       )}
 
