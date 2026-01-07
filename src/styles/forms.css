@@ -201,3 +201,21 @@ label,
   flex: 1;
   font-size: 0.95rem;
 }
+
+/* Legacy form overrides for backwards compatibility */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background-color: var(--surface-secondary, #2a2a2a);
+  border-color: var(--border, #555);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent, #667eea);
+}
+
+.form-section h3 {
+  color: var(--accent, #667eea);
+}

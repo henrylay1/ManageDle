@@ -5,9 +5,9 @@ import { useAppStore } from '@/store/appStore';
 import { Game, GameRecord, ShareTextEntry } from '@/types/models';
 
 import { autoFillFromShareText, parseLoLdleSummary, parsePokedleSummary, parseGamedleSummary, parseShareText } from '@/utils/shareTextParser';
-import './Modal.css';
-import './Forms.css';
-import './Buttons.css';
+import '../styles/modals.css';
+import '../styles/forms.css';
+import '../styles/buttons.css';
 import './ScoreEntryModal.css';
 
 interface ScoreEntryModalProps {

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ticketSchema, type TicketFormData } from '@/lib/validationSchemas';
-import './Modal.css';
-import './Forms.css';
-import './Buttons.css';
+import '../styles/modals.css';
+import '../styles/forms.css';
+import '../styles/buttons.css';
 import './TicketModal.css';
 
 interface TicketModalProps {

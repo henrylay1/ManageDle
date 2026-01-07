@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import './Modal.css';
+import '../styles/modals.css';
 import './ChangelogModal.css';
 
 function escapeHtml(s: string) {

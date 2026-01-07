@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
-import './Modal.css';
-import './Forms.css';
-import './Buttons.css';
+import '../styles/modals.css';
+import '../styles/forms.css';
+import '../styles/buttons.css';
 import './AddGameModal.css';
 
 interface AddGameModalProps {

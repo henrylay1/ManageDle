@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { socialService } from '@/services/socialService';
 import { useAppStore } from '@/store/appStore';
+import '../styles/buttons.css';
 
 interface FollowButtonProps {
   userId: string;
@@ -70,16 +71,10 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowChan
       <button
         onClick={handleFollowClick}
         disabled={isLoading || !authUser}
-        className={`follow-button ${isFollowing ? 'following' : ''} ${isLoading ? 'loading' : ''}`}
+        className={isFollowing ? `btn-secondary ${isLoading ? 'loading' : ''} active` : `btn-primary ${isLoading ? 'loading' : ''}`}
         title={!authUser ? 'Sign in to follow users' : ''}
       >
-        {isLoading ? (
-          'Loading...'
-        ) : isFollowing ? (
-          'Following'
-        ) : (
-          'Follow'
-        )}
+        {isLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
       </button>
       {error && <span className="follow-error">{error}</span>}
     </div>

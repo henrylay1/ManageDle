@@ -1,6 +1,6 @@
 import { Game, GameRecord } from '@/types/models';
-import './Modal.css';
-import './Buttons.css';
+import '../styles/modals.css';
+import '../styles/buttons.css';
 import './RemoveModal.css';
 
 interface RemoveModalProps {

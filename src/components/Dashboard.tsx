@@ -15,7 +15,7 @@ import { GameIconTooltip } from './GameIconTooltip';
 import { AccountMenu } from './AccountMenu';
 import { authService } from '@/services/authService';
 import { Game } from '@/types/models';
-import './Buttons.css';
+import '../styles/buttons.css';
 import './Dashboard.css';
 import './Shimmer.css';
 

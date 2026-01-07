@@ -1,7 +1,7 @@
 import { useGameStats } from '@/hooks/useUserStats';
 import { Game } from '@/types/models';
-import './Modal.css';
-import './Buttons.css';
+import '../styles/modals.css';
+import '../styles/buttons.css';
 import './StatsModal.css';
 
 interface StatsModalProps {

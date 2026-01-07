@@ -2,7 +2,7 @@ import { Game, GameRecord } from '@/types/models';
 import { formatTimeUntilReset, getTimeUntilReset } from '@/utils/resetTimeUtils';
 import { useEffect, useState, useRef } from 'react';
 import { GameIconTooltip } from './GameIconTooltip';
-import './Buttons.css';
+import '../styles/buttons.css';
 import './GameCard.css';
 
 /**
