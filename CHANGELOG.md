@@ -1,5 +1,20 @@
 # ManageDle Change Log
 
+## [V1.0.2] - 2026-01-06
+Quality of life improvements and performance enhancements
+
+### New Features
+- **Consecutive Play Mode:** Click "▶️ Play All" to automatically cycle through all incomplete games in sequence.
+
+### Improvements
+- **Profile Preview Stats Logic** Shift logic to stats-modal and consolidate.
+- **Leaderboard Filter** Now correctly sorts by game filter regardless of global/following filter.
+- **Public Profile Path** Clicking on a user's avatar now directs to the correct profile URL.
+- **Form Validation** Login, registration, and support forms now have real-time validation with clear error messages.
+- **Stats Performance** Improved caching and loading for game statistics - stats load faster and stay fresh.
+- **Overall Stability** Enhanced error handling and improved loading states throughout the app.
+- **General QOL** UI clarity and removed unused code.
+
 ## [V1.0.1] - 2026-01-06
 Polish and deployment improvements.
 
