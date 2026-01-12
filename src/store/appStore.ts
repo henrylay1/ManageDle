@@ -486,8 +486,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentStorage = localStorage;
       gameRepo = new GameRepository(new SupabaseStorageAdapter('guest'));
 
-      // Re-initialize with guest mode
-
       // Re-initialize with local storage (will repopulate guest view)
       await get().initialize();
     } catch (error) {

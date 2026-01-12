@@ -13,11 +13,20 @@ dist-ssr
 *.local
 db
 
+# Linting
+.eslintcache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
 .idea
 .DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -26,5 +35,7 @@ db
 
 # Do not commit environment files
 .env
+.env.local
+.env.*.local
 db/
 .vercel

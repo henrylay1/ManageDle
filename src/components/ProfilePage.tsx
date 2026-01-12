@@ -7,6 +7,7 @@ import ActivityHeatmap from './ActivityHeatmap';
 import { PfpPicker } from './PfpPicker';
 import { UserProfileModal } from './UserProfileModal';
 import './ProfilePage.css';
+import './UserProfileModal.css';
 import '../styles/buttons.css';
 
 interface SocialConnection {
@@ -89,14 +90,10 @@ export default function ProfilePage() {
       // Fetch social connections
       const followingList = await socialService.getFollowingList(data.id, 50, 0);
       const mutualFriends = await socialService.getMutualFriends(data.id, 50, 0);
-      console.log('[ProfilePage] Following list:', followingList);
-      console.log('[ProfilePage] Mutual friends:', mutualFriends);
       const mutualFriendIds = new Set(mutualFriends.map((f: any) => f.id));
-      console.log('[ProfilePage] Mutual friend IDs:', Array.from(mutualFriendIds));
       
       const connections: SocialConnection[] = followingList.map((user: any) => {
         const isFriend = mutualFriendIds.has(user.id);
-        console.log(`[ProfilePage] User ${user.display_name} (${user.id}) - isFriend: ${isFriend}`);
         return {
           id: user.id,
           display_name: user.display_name,

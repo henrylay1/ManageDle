@@ -1,10 +1,16 @@
 // Consolidated modal exports for easier imports
-export { default as TicketModal } from './TicketModal';
-export { default as ScoreEntryModal } from './ScoreEntryModal';
-export { default as StatsModal } from './StatsModal';
-export { default as RemoveModal } from './RemoveModal';
-export { default as ChangelogModal } from './ChangelogModal';
+// Using React.lazy for code splitting - wrap with Suspense when using
+import { lazy } from 'react';
+
+export const TicketModal = lazy(() => import('./TicketModal'));
+export const ScoreEntryModal = lazy(() => import('./ScoreEntryModal'));
+export const StatsModal = lazy(() => import('./StatsModal'));
+export const RemoveModal = lazy(() => import('./RemoveModal'));
+export const ChangelogModal = lazy(() => import('./ChangelogModal'));
+export const AddGameModal = lazy(() => import('./AddGameModal'));
+
+// These are used immediately on page load, so keep static imports
 export { LoginModal } from './LoginModal';
 export { RegisterModal } from './RegisterModal';
 export { LeaderboardModal } from './LeaderboardModal';
-export { default as AddGameModal } from './AddGameModal';
+export { SocialModal, SocialFAB } from './SocialModal';

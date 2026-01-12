@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { setQueryClient } from './lib/queryClient'
 import './index.css'
 
@@ -24,8 +25,10 @@ setQueryClient(queryClient)
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
-      <ReactQueryDevtools initialIsOpen={false} />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </React.StrictMode>,
 )

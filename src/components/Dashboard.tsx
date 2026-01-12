@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import {
   TicketModal,
   ScoreEntryModal,
@@ -8,6 +8,8 @@ import {
   LoginModal,
   RegisterModal,
   LeaderboardModal,
+  SocialModal,
+  SocialFAB,
 } from './modals';
 import { useAppStore } from '@/store/appStore';
 import GameCard from './GameCard';
@@ -117,6 +119,7 @@ function Dashboard() {
   const [isRegisterFromStats, setIsRegisterFromStats] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showSocialModal, setShowSocialModal] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['academic']);
   const gameCardRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -573,7 +576,11 @@ function Dashboard() {
           <h2>📅 Today's Games</h2>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {/* Ticket Modal */}
-              <TicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
+              <Suspense fallback={null}>
+                {showTicketModal && (
+                  <TicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
+                )}
+              </Suspense>
             {/* Organize Mode Toggle */}
             {activeGames.length > 1 && (
               <button
@@ -1055,27 +1062,32 @@ function Dashboard() {
         */}
       </section>
 
-      {selectedGame && showScoreEntry && (
-        <ScoreEntryModal
-          game={selectedGame}
-          existingRecord={getTodayRecord(selectedGame.gameId)}
-          onClose={handleScoreEntryClose}
-          onSave={consecutivePlayMode ? handleConsecutiveSave : undefined}
-        />
-      )}
+      <Suspense fallback={null}>
+        {selectedGame && showScoreEntry && (
+          <ScoreEntryModal
+            game={selectedGame}
+            existingRecord={getTodayRecord(selectedGame.gameId)}
+            onClose={handleScoreEntryClose}
+            onSave={consecutivePlayMode ? handleConsecutiveSave : undefined}
+          />
+        )}
+      </Suspense>
 
-      {showStats && selectedGame && (
-        <StatsModal
-          game={selectedGame}
-          onClose={() => {
-            setShowStats(false);
-            setSelectedGame(null);
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showStats && selectedGame && (
+          <StatsModal
+            game={selectedGame}
+            onClose={() => {
+              setShowStats(false);
+              setSelectedGame(null);
+            }}
+          />
+        )}
+      </Suspense>
 
-      {showRemove && selectedGame && (
-        <RemoveModal
+      <Suspense fallback={null}>
+        {showRemove && selectedGame && (
+          <RemoveModal
           game={selectedGame}
           record={getTodayRecord(selectedGame.gameId)}
           onClose={() => {
@@ -1085,22 +1097,27 @@ function Dashboard() {
           onRemoveGame={handleRemoveFromActive}
           onDeleteRecord={handleDeleteRecord}
         />
-      )}
+        )}
+      </Suspense>
 
-      {showClearAll && (
-        <RemoveModal
-          game={activeGames[0]}
-          record={undefined}
-          onClose={() => setShowClearAll(false)}
-          onRemoveGame={handleConfirmClearAll}
-          onDeleteRecord={() => {}}
-          clearAllMode={true}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showClearAll && (
+          <RemoveModal
+            game={activeGames[0]}
+            record={undefined}
+            onClose={() => setShowClearAll(false)}
+            onRemoveGame={handleConfirmClearAll}
+            onDeleteRecord={() => {}}
+            clearAllMode={true}
+          />
+        )}
+      </Suspense>
 
-      {showChangelog && (
-        <ChangelogModal onClose={() => setShowChangelog(false)} />
-      )}
+      <Suspense fallback={null}>
+        {showChangelog && (
+          <ChangelogModal onClose={() => setShowChangelog(false)} />
+        )}
+      </Suspense>
 
       {/* Auth & Leaderboard Modals */}
       <LoginModal
@@ -1135,6 +1152,13 @@ function Dashboard() {
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
         onNavigateToGame={handleNavigateToGame}
+      />
+
+      {/* Social Features */}
+      <SocialFAB onClick={() => setShowSocialModal(true)} />
+      <SocialModal
+        isOpen={showSocialModal}
+        onClose={() => setShowSocialModal(false)}
       />
     </div>
   );

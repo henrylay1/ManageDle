@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ticketSchema, type TicketFormData } from '@/lib/validationSchemas';
@@ -12,7 +12,7 @@ interface TicketModalProps {
   onClose: () => void;
 }
 
-const TicketModal: React.FC<TicketModalProps> = ({ isOpen, onClose }) => {
+function TicketModal({ isOpen, onClose }: TicketModalProps) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueUrl, setIssueUrl] = useState<string | null>(null);

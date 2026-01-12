@@ -224,7 +224,7 @@
   overflow-y: auto;
 }
 
-.user-profile-social-item {
+.profile-social-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -236,7 +236,7 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-normal);
 }
 
-.user-profile-social-item:hover {
+.profile-social-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
@@ -323,4 +323,10 @@
 .user-profile-social-badge.following {
   background: rgba(102, 126, 234, 0.2);
   color: var(--accent);
+}
+
+.user-profile-social-badge.you {
+  background: rgba(218, 165, 32, 0.12);
+  color: var(--text-primary);
+  font-weight: 700;
 }

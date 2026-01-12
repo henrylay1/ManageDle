@@ -52,3 +52,16 @@ export const ticketSchema = z.object({
 });
 
 export type TicketFormData = z.infer<typeof ticketSchema>;
+
+/**
+ * Add game form validation schema
+ */
+export const addGameSchema = z.object({
+  displayName: z.string().min(1, 'Game name is required').max(50, 'Name is too long'),
+  url: z.string().url('Must be a valid URL'),
+  icon: z.string().max(4),
+  isActive: z.boolean(),
+  isFailable: z.boolean(),
+});
+
+export type AddGameFormData = z.infer<typeof addGameSchema>;

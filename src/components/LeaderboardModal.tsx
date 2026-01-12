@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { leaderboardService, type LeaderboardEntry } from '@/services/leaderboardService';
 import { socialService } from '@/services/socialService';
+import { groupService } from '@/services/groupService';
 import { useAppStore } from '@/store/appStore';
 import { UserProfileModal } from './UserProfileModal';
+import { type Group } from '@/types/social';
 import '../styles/modals.css';
 import '../styles/button-groups.css';
 import '../styles/forms.css';
@@ -29,6 +31,10 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
   const [selectedUser, setSelectedUser] = useState<SelectedUserProfile | null>(null);
   const [timePeriod, setTimePeriod] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [filterByFollowing, setFilterByFollowing] = useState(false);
+  const [userGroups, setUserGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
   
   const games = useAppStore(state => state.games);
   const authUser = useAppStore(state => state.authUser);
@@ -37,7 +43,39 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
     if (isOpen) {
       loadLeaderboard();
     }
-  }, [isOpen, selectedGame, timePeriod, filterByFollowing]);
+  }, [isOpen, selectedGame, timePeriod, filterByFollowing, selectedGroupId]);
+
+  useEffect(() => {
+    if (filterByFollowing && authUser) {
+      loadUserGroups();
+    } else {
+      setUserGroups([]);
+      setSelectedGroupId(null);
+    }
+  }, [filterByFollowing, authUser]);
+
+  const loadUserGroups = async () => {
+    if (!authUser) return;
+    setGroupsLoading(true);
+    try {
+      const groups = await groupService.getUserGroups(authUser.id);
+      setUserGroups(groups);
+    } catch (error) {
+      console.error('Error loading user groups:', error);
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const loadGroupMembers = async (groupId: string) => {
+    try {
+      const members = await groupService.getGroupMembers(groupId);
+      setGroupMembers(members);
+    } catch (error) {
+      console.error('Error loading group members:', error);
+      setGroupMembers([]);
+    }
+  };
 
   const loadLeaderboard = async () => {
     setIsLoading(true);
@@ -58,23 +96,33 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
       // If filtering by following, use socialService instead (no follower counts shown)
       if (filterByFollowing && authUser) {
         try {
-          const followingLeaderboard = await socialService.getLeaderboardByFollowers(100, 0, authUser.id);
+          let userIds: Set<string>;
 
-          // Build set of followed user IDs and include current user
-          const followedIds = new Set<string>(followingLeaderboard.map((u: any) => u.id));
-          followedIds.add(authUser.id);
+          if (selectedGroupId) {
+            // Filter by selected group members
+            if (groupMembers.length === 0) {
+              await loadGroupMembers(selectedGroupId);
+            }
+            userIds = new Set<string>(groupMembers.map((m: any) => m.user_id));
+            userIds.add(authUser.id);
+          } else {
+            // Filter by followed users
+            const followingLeaderboard = await socialService.getLeaderboardByFollowers(100, 0, authUser.id);
+            userIds = new Set<string>(followingLeaderboard.map((u: any) => u.id));
+            userIds.add(authUser.id);
+          }
 
           // Get leaderboard data - either specific game or all games
           let leaderboardData: any[] = [];
           
           if (selectedGame === 'all') {
-            // Get all game leaderboards within date range and aggregate only followed users
+            // Get all game leaderboards within date range and aggregate only followed/group users
             const allLeaderboards = await leaderboardService.getAllGamesLeaderboard(50, sinceDate);
             const userMap = new Map<string, LeaderboardEntry>();
 
             for (const lb of allLeaderboards) {
               for (const entry of lb.entries) {
-                if (!followedIds.has(entry.userId)) continue;
+                if (!userIds.has(entry.userId)) continue;
 
                 if (!userMap.has(entry.userId)) {
                   userMap.set(entry.userId, { ...entry, gameId: 'all', gameName: 'All Games' });
@@ -123,9 +171,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
 
             leaderboardData = aggregated.slice(0, 100);
           } else {
-            // Get specific game leaderboard and filter by followed users
+            // Get specific game leaderboard and filter by followed/group users
             const gameLeaderboard = await leaderboardService.getGameLeaderboard(selectedGame, 100, sinceDate);
-            leaderboardData = gameLeaderboard.filter(entry => followedIds.has(entry.userId));
+            leaderboardData = gameLeaderboard.filter(entry => userIds.has(entry.userId));
           }
 
           setLeaderboard(leaderboardData);
@@ -253,6 +301,45 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                 <span className="toggle-switch-label right">Following</span>
                 <span className="toggle-switch-knob" />
               </button>
+            </div>
+          )}
+
+          {/* Group filter - only show when in following mode */}
+          {filterByFollowing && authUser && (
+            <div className="mb-4">
+              <label className="form-label">Filter by group (optional):</label>
+              {groupsLoading ? (
+                <div style={{ padding: '8px', color: 'var(--text-secondary)' }}>Loading groups...</div>
+              ) : (
+                <div className="groups-filter-list">
+                  <div
+                    key="all"
+                    className={`group-filter-item ${selectedGroupId === null ? 'active' : ''}`}
+                    onClick={() => setSelectedGroupId(null)}
+                  >
+                    <div className="group-filter-icon">🌐</div>
+                    <div className="group-filter-info">
+                      <div className="group-filter-name">All Following</div>
+                    </div>
+                  </div>
+                  {userGroups.map(group => (
+                    <div
+                      key={group.id}
+                      className={`group-filter-item ${selectedGroupId === group.id ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedGroupId(group.id);
+                        loadGroupMembers(group.id);
+                      }}
+                    >
+                      <div className="group-filter-icon">🏠</div>
+                      <div className="group-filter-info">
+                        <div className="group-filter-name">{group.name}</div>
+                        <div className="group-filter-meta">{group.member_count || 0} member{(group.member_count || 0) !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

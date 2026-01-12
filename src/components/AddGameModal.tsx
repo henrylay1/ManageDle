@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAppStore } from '@/store/appStore';
+import { addGameSchema, type AddGameFormData } from '@/lib/validationSchemas';
 import '../styles/modals.css';
 import '../styles/forms.css';
 import '../styles/buttons.css';
@@ -11,44 +14,40 @@ interface AddGameModalProps {
 
 function AddGameModal({ onClose }: AddGameModalProps) {
   const { addGame } = useAppStore();
-  
-  const [displayName, setDisplayName] = useState('');
-  const [url, setUrl] = useState('');
-  const [icon, setIcon] = useState('🎮');
-  const [isActive, setIsActive] = useState(true);
-  const [isFailable, setIsFailable] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!displayName.trim() || !url.trim()) {
-      alert('Please fill in the required fields');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<AddGameFormData>({
+    resolver: zodResolver(addGameSchema),
+    defaultValues: {
+      icon: '🎮',
+      isActive: true,
+      isFailable: true,
+    },
+  });
 
-    setIsSubmitting(true);
-
+  const onSubmit = async (data: AddGameFormData) => {
+    setSubmitError('');
     try {
       await addGame({
-        displayName: displayName.trim(),
-        url: url.trim(),
+        displayName: data.displayName.trim(),
+        url: data.url.trim(),
         category: 'misc',
-        icon,
+        icon: data.icon || '🎮',
         trackingType: 'automatic',
-        isActive,
-        isFailable,
-        resetTime: '00:00', // Default to midnight UTC
+        isActive: data.isActive,
+        isFailable: data.isFailable,
+        resetTime: '00:00',
         isAsynchronous: true,
-        scoreTypes: { puzzle1: { attempts: 6 } }, // Default, should be customized as needed
+        scoreTypes: { puzzle1: { attempts: 6 } },
       });
-
       onClose();
     } catch (error) {
       console.error('Error adding game:', error);
-      alert('Failed to add game. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      setSubmitError('Failed to add game. Please try again.');
     }
   };
 
@@ -68,7 +67,13 @@ function AddGameModal({ onClose }: AddGameModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="add-game-form">
+        <form onSubmit={handleSubmit(onSubmit)} className="add-game-form">
+          {submitError && (
+            <div className="error-message" style={{ marginBottom: '1rem' }}>
+              {submitError}
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="displayName">
               Game Name <span className="required">*</span>
@@ -76,11 +81,12 @@ function AddGameModal({ onClose }: AddGameModalProps) {
             <input
               id="displayName"
               type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              {...register('displayName')}
               placeholder="e.g., Wordle"
-              required
             />
+            {errors.displayName && (
+              <div className="error-message">{errors.displayName.message}</div>
+            )}
           </div>
 
           <div className="form-group">
@@ -90,11 +96,12 @@ function AddGameModal({ onClose }: AddGameModalProps) {
             <input
               id="url"
               type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              {...register('url')}
               placeholder="https://example.com/game"
-              required
             />
+            {errors.url && (
+              <div className="error-message">{errors.url.message}</div>
+            )}
           </div>
 
           <div className="form-group">
@@ -102,8 +109,7 @@ function AddGameModal({ onClose }: AddGameModalProps) {
             <input
               id="icon"
               type="text"
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
+              {...register('icon')}
               placeholder="🎮"
               maxLength={4}
             />
@@ -113,8 +119,7 @@ function AddGameModal({ onClose }: AddGameModalProps) {
             <label className="checkbox-label">
               <input
                 type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
+                {...register('isActive')}
               />
               <span>Add to active roster</span>
             </label>
@@ -124,8 +129,7 @@ function AddGameModal({ onClose }: AddGameModalProps) {
             <label className="checkbox-label">
               <input
                 type="checkbox"
-                checked={isFailable}
-                onChange={(e) => setIsFailable(e.target.checked)}
+                {...register('isFailable')}
               />
               <span>Can be failed (has limited attempts)</span>
             </label>

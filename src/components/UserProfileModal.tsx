@@ -68,18 +68,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
       // Fetch following list
       const followingList = await socialService.getFollowingList(userId, 50, 0);
-      console.log('[UserProfileModal] Following list:', followingList);
       
       // Fetch mutual friends to determine friend status
       const mutualFriends = await socialService.getMutualFriends(userId, 50, 0);
-      console.log('[UserProfileModal] Mutual friends:', mutualFriends);
       const mutualFriendIds = new Set(mutualFriends.map((f: any) => f.id));
-      console.log('[UserProfileModal] Mutual friend IDs:', Array.from(mutualFriendIds));
       
       // Build social connections list
       const connections: SocialConnection[] = followingList.map((user: any) => {
         const isFriend = mutualFriendIds.has(user.id);
-        console.log(`[UserProfileModal] User ${user.display_name} (${user.id}) - isFriend: ${isFriend}`);
         return {
           id: user.id,
           display_name: user.display_name,
@@ -296,7 +292,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   const isImage = typeof connection.avatar_url === 'string' && 
                     (connection.avatar_url.startsWith('http://') || connection.avatar_url.startsWith('https://'));
                   return (
-                    <div key={connection.id} className="user-profile-social-item">
+                    <div key={connection.id} className="profile-social-item">
                       <button
                         onClick={() => setNestedProfile({
                           userId: connection.id,
