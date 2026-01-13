@@ -1,5 +1,25 @@
 # ManageDle Change Log
 
+## [V1.1.0] - 2026-01-12
+Social features expansion and codebase modernization
+
+### New Features
+- **Social View** Added Social View feature that allows users to view their social connections, including groups and friends. 
+- **Groups:** Groups can be made with friends/followers.
+- **Group Leaderboard Filtering:** Filter leaderboards by your groups when in "Following" mode. Quickly compare scores within specificgroups.
+- **Enhanced Group Member Display:** Group members now show role badges (Owner/Admin/Member) and relationship badges (Friend/Following/You) stacked vertically for clarity.
+
+
+### Improvements
+- **Code Splitting:** Some modal components now lazy-load on demand, reducing initial bundle size by ~51KB and improving page load performance.
+- **Error Boundaries:** Added application-wide error boundary to handle crashes with user-friendly fallback UI and recovery options.
+- **Code Cleanup:** Removed debug console.log statements and redundant namespace imports throughout the codebase.
+- **UI Consistency:** Redesigned and touched up on some UI.
+
+### Bug Fixes
+- **Group Description Editing:** Fixed type error where undefined was returned instead of boolean.
+- **Avatar Click Handlers:** Group member avatars now properly trigger profile modal with correct user data.
+
 ## [V1.0.2] - 2026-01-06
 Quality of life improvements and performance enhancements
 
