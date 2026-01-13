@@ -245,9 +245,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           <button
             onClick={onClose}
             className="modal-close"
-            aria-label="Close leaderboard"
+            aria-label="Close"
           >
-            X
+            ×
           </button>
         </div>
 

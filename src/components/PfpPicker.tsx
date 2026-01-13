@@ -20,7 +20,7 @@ export function PfpPicker({ pfps, onSelect, onClose }: PfpPickerProps) {
       <div className="modal-content pfp-picker-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Select a Profile Picture</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <div className="pfp-grid">

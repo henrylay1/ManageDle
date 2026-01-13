@@ -219,7 +219,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <button
             onClick={onClose}
             className="modal-close"
-            aria-label="Close profile"
+            aria-label="Close"
           >
             ×
           </button>

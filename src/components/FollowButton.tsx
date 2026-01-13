@@ -71,7 +71,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowChan
       <button
         onClick={handleFollowClick}
         disabled={isLoading || !authUser}
-        className={isFollowing ? `btn-secondary ${isLoading ? 'loading' : ''} active` : `btn-primary ${isLoading ? 'loading' : ''}`}
+        className={`${isFollowing ? 'btn-secondary active' : 'btn-primary'}${isLoading ? ' loading' : ''}`}
         title={!authUser ? 'Sign in to follow users' : ''}
       >
         {isLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}

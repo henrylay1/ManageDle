@@ -10,7 +10,7 @@ A daily puzzle hub to track, manage, and compare your daily Wordle-style games. 
 - **Comprehensive Game Stats:** View per-game statistics, including streaks, win percentages, max win streaks, and historical records via the Stats modal.
 - **Graphical Activity Visualization:** Interactive charts and visualizations display play activity over time, streaks, and other trends to help you understand your habits.
 - **Accessibility & Theming:** Supports dark and light themes and accessible UI patterns for inclusive use.
-- **Coming Soon — Social Features:** Friends and groups to compete with and track each other, leaderboards scoped to private groups, and shared challenges.
+- **Social Features:** Friends and groups to compete with and track each other, leaderboards scoped to private groups, and shared challenges.
 - **Coming Soon — Community Puzzles:** Create custom puzzles and browse a community catalog. Future work aims to fully integrate popular community puzzles into the dashboard for direct play and tracking.
 
 ## Tech Stack

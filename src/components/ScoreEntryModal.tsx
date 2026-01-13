@@ -642,7 +642,7 @@ function ScoreEntryModal({ game, existingRecord, onClose, onSave }: ScoreEntryMo
           <h2>
             {game.icon} {existingRecord ? 'Edit' : 'Log'} Score - {game.displayName}
           </h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>

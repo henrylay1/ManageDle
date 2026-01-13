@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { socialService } from '@/services/socialService';
 import { groupService } from '@/services/groupService';
 import { useAppStore } from '@/store/appStore';
@@ -28,6 +29,7 @@ type TabType = 'friends' | 'groups';
 export function SocialModal({ isOpen, onClose }: SocialModalProps) {
   const { authUser, isAuthenticated } = useAppStore();
   const userId = authUser?.id;
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -44,19 +46,24 @@ export function SocialModal({ isOpen, onClose }: SocialModalProps) {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [mutualIds, setMutualIds] = useState<Set<string>>(new Set());
 
-  // Load data when modal opens or tab changes
+  // Prefetch and load data when modal opens or tab changes
   useEffect(() => {
+    const STALE = 5 * 60 * 1000; // 5 minutes
     if (isOpen && userId && isAuthenticated) {
+      // Preemptively cache both friends and groups so tab switches are instant
+      queryClient.prefetchQuery({ queryKey: ['friends', userId], queryFn: () => socialService.getMutualFriends(userId), staleTime: STALE });
+      queryClient.prefetchQuery({ queryKey: ['groups', userId], queryFn: () => groupService.getUserGroups(userId), staleTime: STALE });
+
       loadData();
       loadRelations();
     }
-  }, [isOpen, userId, isAuthenticated, activeTab]);
+  }, [isOpen, userId, isAuthenticated, activeTab, queryClient]);
 
   const loadRelations = async () => {
     if (!userId) return;
     try {
-      const following = await socialService.getFollowingList(userId, 200, 0);
-      const mutual = await socialService.getMutualFriends(userId, 200, 0);
+      const following = await queryClient.fetchQuery({ queryKey: ['followingList', userId, 200, 0], queryFn: () => socialService.getFollowingList(userId, 200, 0) });
+      const mutual = await queryClient.fetchQuery({ queryKey: ['mutualFriends', userId, 200, 0], queryFn: () => socialService.getMutualFriends(userId, 200, 0) });
       setFollowingIds(new Set((following || []).map((u: any) => u.id)));
       setMutualIds(new Set((mutual || []).map((u: any) => u.id)));
     } catch (err) {
@@ -68,12 +75,24 @@ export function SocialModal({ isOpen, onClose }: SocialModalProps) {
     if (!userId) return;
     setLoading(true);
     try {
+      const STALE = 5 * 60 * 1000;
       if (activeTab === 'friends') {
-        const friendsData = await socialService.getMutualFriends(userId);
-        setFriends(friendsData);
+        // Try to get cached data first
+        const cached = queryClient.getQueryData(['friends', userId]) as any[] | undefined;
+        if (cached) {
+          setFriends(cached);
+        } else {
+          const friendsData = await queryClient.fetchQuery({ queryKey: ['friends', userId], queryFn: () => socialService.getMutualFriends(userId), staleTime: STALE });
+          setFriends(friendsData || []);
+        }
       } else {
-        const groupsData = await groupService.getUserGroups(userId);
-        setGroups(groupsData);
+        const cached = queryClient.getQueryData(['groups', userId]) as any[] | undefined;
+        if (cached) {
+          setGroups(cached);
+        } else {
+          const groupsData = await queryClient.fetchQuery({ queryKey: ['groups', userId], queryFn: () => groupService.getUserGroups(userId), staleTime: STALE });
+          setGroups(groupsData || []);
+        }
       }
     } catch (error) {
       console.error('Error loading social data:', error);
@@ -205,7 +224,7 @@ export function SocialModal({ isOpen, onClose }: SocialModalProps) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Social</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>

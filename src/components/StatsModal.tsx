@@ -31,7 +31,7 @@ function StatsModal({ game, onClose }: StatsModalProps) {
       <div className="modal-content stats-modal">
         <div className="modal-header">
           <h2>{game.icon} {game.displayName} Statistics</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>

@@ -62,7 +62,7 @@ function AddGameModal({ onClose }: AddGameModalProps) {
       <div className="modal-content add-game-modal">
         <div className="modal-header">
           <h2>➕ Add New Game</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
