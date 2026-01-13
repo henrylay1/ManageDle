@@ -437,7 +437,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           displayName={selectedUser.displayName}
           avatarUrl={selectedUser.avatarUrl}
           onNavigateToGame={onNavigateToGame}
-
+          onNavigateToProfile={(userId, displayName, avatarUrl) => {
+            setSelectedUser({ userId, displayName, avatarUrl });
+          }}
         />
       )}
     </div>

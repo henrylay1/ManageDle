@@ -32,8 +32,8 @@ interface UserProfileModalProps {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
-  isNested?: boolean;
   onNavigateToGame?: (gameId: string) => void;
+  onNavigateToProfile?: (userId: string, displayName: string, avatarUrl: string | null) => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -43,13 +43,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   displayName,
   avatarUrl,
   onNavigateToGame,
+  onNavigateToProfile,
 }) => {
   const [gameStats, setGameStats] = useState<UserGameStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [followersCount, setFollowersCount] = useState(0);
   const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
-  const [nestedProfile, setNestedProfile] = useState<{ userId: string; displayName: string; avatarUrl: string | null } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -298,11 +298,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   return (
                     <div key={connection.id} className="profile-social-item">
                       <button
-                        onClick={() => setNestedProfile({
-                          userId: connection.id,
-                          displayName: connection.display_name || 'Unknown',
-                          avatarUrl: connection.avatar_url,
-                        })}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onNavigateToProfile?.(
+                            connection.id,
+                            connection.display_name || 'Unknown',
+                            connection.avatar_url
+                          );
+                        }}
                         className="user-profile-social-avatar-button"
                         title={`View ${connection.display_name || 'Unknown'}'s profile`}
                       >
@@ -331,20 +336,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           )}
         </div>
         </div>
-
-        {/* Nested Profile Modal */}
-        {nestedProfile && (
-          <UserProfileModal
-            isOpen={!!nestedProfile}
-            onClose={() => setNestedProfile(null)}
-            userId={nestedProfile.userId}
-            displayName={nestedProfile.displayName}
-            avatarUrl={nestedProfile.avatarUrl}
-            isNested={true}
-            onNavigateToGame={onNavigateToGame}
-
-          />
-        )}
       </div>
     </div>
   );

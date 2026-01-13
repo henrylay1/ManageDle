@@ -282,6 +282,9 @@ export function SocialModal({ isOpen, onClose }: SocialModalProps) {
             userId={selectedUser.userId}
             displayName={selectedUser.displayName}
             avatarUrl={selectedUser.avatarUrl}
+            onNavigateToProfile={(userId, displayName, avatarUrl) => {
+              setSelectedUser({ userId, displayName, avatarUrl });
+            }}
           />
         )}
       </div>

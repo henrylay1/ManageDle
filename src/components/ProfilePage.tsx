@@ -297,7 +297,9 @@ export default function ProfilePage() {
           userId={nestedProfile.userId}
           displayName={nestedProfile.displayName}
           avatarUrl={nestedProfile.avatarUrl}
-          isNested={true}
+          onNavigateToProfile={(userId, displayName, avatarUrl) => {
+            setNestedProfile({ userId, displayName, avatarUrl });
+          }}
         />
       )}
     </div>
