@@ -13,12 +13,16 @@ interface RemoveModalProps {
 }
 
 function RemoveModal({ game, record, onClose, onRemoveGame, onDeleteRecord, clearAllMode }: RemoveModalProps) {
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content">
         <div className="modal-header">
           <h2>{clearAllMode ? 'Clear All Games' : `Remove "${game.displayName}"`}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         
         <div className="modal-body"> 

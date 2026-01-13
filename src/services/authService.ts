@@ -50,6 +50,9 @@ export class AuthService {
       projectRef +
       '.supabase.co/storage/v1/object/public/profile-pictures/def_pfp_cat_1.jpg';
 
+    // Get the app URL for email verification redirect
+    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+
     const { data, error } = await supabase.auth.signUp({
       email: sanitizedEmail,
       password,
@@ -58,6 +61,7 @@ export class AuthService {
           display_name: sanitizedDisplayName,
           avatar_url: defaultAvatarUrl,
         },
+        emailRedirectTo: `${appUrl}/`,
       },
     });
 

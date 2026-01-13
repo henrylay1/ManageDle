@@ -175,6 +175,7 @@ interface AppState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl?: string) => Promise<void>;
   
   // Game actions
@@ -490,6 +491,57 @@ export const useAppStore = create<AppState>((set, get) => ({
       await get().initialize();
     } catch (error) {
       handleAuthError(error, 'logout');
+      throw error;
+    }
+  },
+
+  deleteAccount: async () => {
+    try {
+      const { authUser, logout } = get();
+      if (!authUser) {
+        throw new Error('No authenticated user');
+      }
+
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        throw new Error('No active session');
+      }
+
+      // Call the delete account API
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      // Handle 404 in development
+      if (response.status === 404) {
+        throw new Error('API endpoint not available. Please run "vercel dev" instead of "npm run dev" to test account deletion locally.');
+      }
+
+      // Try to parse as JSON
+      let result;
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server error: ${text}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete account');
+      }
+
+      // On success, logout and clear all data
+      await logout();
+    } catch (error) {
+      handleAuthError(error, 'deleteAccount');
       throw error;
     }
   },

@@ -176,10 +176,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
   const isImage = typeof avatarUrl === 'string' && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content user-profile-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content user-profile-modal">
         <div className="modal-header">
           {isImage ? (
             <a

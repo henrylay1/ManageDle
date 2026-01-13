@@ -96,12 +96,16 @@ function TicketModal({ isOpen, onClose }: TicketModalProps) {
 
   if (!isOpen) return null;
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content ticket-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content ticket-modal">
         <div className="modal-header">
           <h2>Submit a Ticket</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <form className="ticket-form" onSubmit={handleSubmit(onSubmit)}>
           <label>

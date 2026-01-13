@@ -257,6 +257,35 @@ export default function ProfilePage() {
             ...
           </section>
           */}
+
+          {/* Account Management Section - Only visible to the profile owner */}
+          {profileUser.id === authUser?.id && (
+            <section className="profile-section">
+              <h2>Account Management</h2>
+              <div style={{ marginTop: '1rem' }}>
+                <button
+                  className="btn-danger"
+                  onClick={async () => {
+                    if (!window.confirm('Are you sure you want to delete your account? This action is irreversible and will permanently delete all your data.')) {
+                      return;
+                    }
+                    try {
+                      await useAppStore.getState().deleteAccount();
+                      navigate('/');
+                    } catch (error) {
+                      alert(error instanceof Error ? error.message : 'Failed to delete account');
+                    }
+                  }}
+                  style={{ backgroundColor: '#dc2626', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer' }}
+                >
+                  Delete Account
+                </button>
+                <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  This will permanently delete your account and all associated data.
+                </p>
+              </div>
+            </section>
+          )}
         </div>
       </div>
 

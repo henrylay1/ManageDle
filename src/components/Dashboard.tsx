@@ -6,12 +6,11 @@ import {
   RemoveModal,
   ChangelogModal,
   PrivacyModal,
-  LoginModal,
-  RegisterModal,
   LeaderboardModal,
   SocialModal,
   SocialFAB,
 } from './modals';
+import { AuthModal } from './AuthModal';
 import { useAppStore } from '@/store/appStore';
 import GameCard from './GameCard';
 import { GameIconTooltip } from './GameIconTooltip';
@@ -116,9 +115,9 @@ function Dashboard() {
   const [showClearAll, setShowClearAll] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [isRegisterFromStats, setIsRegisterFromStats] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isAuthFromStats, setIsAuthFromStats] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showSocialModal, setShowSocialModal] = useState(false);
@@ -159,8 +158,9 @@ function Dashboard() {
   const handleViewStats = (game: Game) => {
     if (!isAuthenticated) {
       setSelectedGame(game);
-      setIsRegisterFromStats(true);
-      setShowRegisterModal(true);
+      setIsAuthFromStats(true);
+      setAuthModalMode('register');
+      setShowAuthModal(true);
       return;
     }
     setSelectedGame(game);
@@ -662,13 +662,19 @@ function Dashboard() {
                 <>
                   <button
                     className="btn-primary btn-login"
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={() => {
+                      setAuthModalMode('login');
+                      setShowAuthModal(true);
+                    }}
                   >
                     Log In
                   </button>
                   <button
                     className="btn-primary btn-signup"
-                    onClick={() => setShowRegisterModal(true)}
+                    onClick={() => {
+                      setAuthModalMode('register');
+                      setShowAuthModal(true);
+                    }}
                   >
                     Sign Up
                   </button>
@@ -1138,28 +1144,15 @@ function Dashboard() {
         )}
       </Suspense>
 
-      {/* Auth & Leaderboard Modals */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onSwitchToRegister={() => {
-          setShowLoginModal(false);
-          setShowRegisterModal(true);
-        }}
-      />
-
-      <RegisterModal
-        isOpen={showRegisterModal}
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
         onClose={() => {
-          setShowRegisterModal(false);
-          setIsRegisterFromStats(false);
+          setShowAuthModal(false);
+          setIsAuthFromStats(false);
         }}
-        onSwitchToLogin={() => {
-          setShowRegisterModal(false);
-          setIsRegisterFromStats(false);
-          setShowLoginModal(true);
-        }}
-        isFromStats={isRegisterFromStats}
+        initialMode={authModalMode}
+        isFromStats={isAuthFromStats}
       />
 
       <AccountMenu

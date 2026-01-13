@@ -12,9 +12,6 @@ interface AccountMenuProps {
 export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const handleClose = () => {
-    onClose();
-  };
   
   const authUser = useAppStore(state => state.authUser);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -46,13 +43,15 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen || !isAuthenticated || !authUser) return null;
 
-
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
 
   return (
-    <div className="modal-overlay account-menu-overlay" onClick={handleClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay account-menu-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content">
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="modal-close"
           aria-label="Close"
         >
@@ -65,7 +64,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
           <div className="mb-6">
             <div className="flex items-center mb-4">
               <div className="relative mr-4">
-                {isImage && (
+                {isImage ? (
                   <img
                     src={authUser.avatarUrl || undefined}
                     alt="Profile"
@@ -73,8 +72,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({ isOpen, onClose }) => 
                     style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', background: 'black' }}
                     title="Profile picture"
                   />
-                )}
-                {!isImage && (
+                ) : (
                   <div
                     className="w-16 h-16 rounded-full bg-black flex items-center justify-center text-3xl"
                     title="Profile picture"

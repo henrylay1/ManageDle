@@ -11,7 +11,6 @@ export const PrivacyModal = lazy(() => import('./PrivacyModal'));
 export const AddGameModal = lazy(() => import('./AddGameModal'));
 
 // These are used immediately on page load, so keep static imports
-export { LoginModal } from './LoginModal';
-export { RegisterModal } from './RegisterModal';
+export { AuthModal } from './AuthModal';
 export { LeaderboardModal } from './LeaderboardModal';
 export { SocialModal, SocialFAB } from './SocialModal';
