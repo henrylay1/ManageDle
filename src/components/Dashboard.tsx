@@ -5,6 +5,7 @@ import {
   StatsModal,
   RemoveModal,
   ChangelogModal,
+  PrivacyModal,
   LoginModal,
   RegisterModal,
   LeaderboardModal,
@@ -114,6 +115,7 @@ function Dashboard() {
   const [showRemove, setShowRemove] = useState(false);
   const [showClearAll, setShowClearAll] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegisterFromStats, setIsRegisterFromStats] = useState(false);
@@ -568,6 +570,14 @@ function Dashboard() {
             onClick={() => setShowChangelog(true)}
           >
             📜
+          </button>
+          {/* Privacy / TOS icon (same styling as changelog) */}
+          <button
+            className="btn-icon btn-changelog"
+            title="Privacy & Terms"
+            onClick={() => setShowPrivacy(true)}
+          >
+            🔒
           </button>
         </div>
       </header>
@@ -1116,6 +1126,15 @@ function Dashboard() {
       <Suspense fallback={null}>
         {showChangelog && (
           <ChangelogModal onClose={() => setShowChangelog(false)} />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {showPrivacy && (
+          <PrivacyModal 
+            onClose={() => setShowPrivacy(false)} 
+            onOpenTicket={() => setShowTicketModal(true)}
+          />
         )}
       </Suspense>
 

@@ -7,6 +7,7 @@ export const ScoreEntryModal = lazy(() => import('./ScoreEntryModal'));
 export const StatsModal = lazy(() => import('./StatsModal'));
 export const RemoveModal = lazy(() => import('./RemoveModal'));
 export const ChangelogModal = lazy(() => import('./ChangelogModal'));
+export const PrivacyModal = lazy(() => import('./PrivacyModal'));
 export const AddGameModal = lazy(() => import('./AddGameModal'));
 
 // These are used immediately on page load, so keep static imports
