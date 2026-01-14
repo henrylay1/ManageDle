@@ -9,28 +9,20 @@ interface PrivacyModalProps {
 }
 
 export default function PrivacyModal({ onClose, onOpenTicket }: PrivacyModalProps) {
-  const [content, setContent] = useState<string>('Loading...');
+  const [content, setContent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    const localUrl = '/PRIVACY.md';
-    const rawUrl = 'https://raw.githubusercontent.com/henrylay1/ManageDle/main/PRIVACY.md';
-
     const loadPrivacy = async () => {
       try {
-        let res = await fetch(localUrl);
-        if (!res.ok) {
-          res = await fetch(rawUrl);
-          if (!res.ok) throw new Error('Not found');
-        }
+        const res = await fetch('/PRIVACY.md');
+        if (!res.ok) throw new Error('Not found');
         const md = await res.text();
         if (mounted) setContent(parseMarkdown(md));
       } catch (err) {
         console.error('Failed to load privacy file:', err);
-        if (mounted) {
-          const embedded = `# Privacy Policy\n\nLast updated: 2026-01-12\n\nManageDle respects your privacy. This version is embedded in the app as a fallback.`;
-          setContent(parseMarkdown(embedded));
-        }
+        if (mounted) setError('<p>Cannot find tos</p>');
       }
     };
 
@@ -59,11 +51,15 @@ export default function PrivacyModal({ onClose, onOpenTicket }: PrivacyModalProp
           <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body changelog-body">
-          <div 
-            className="changelog-content" 
-            dangerouslySetInnerHTML={{ __html: content }}
-            onClick={handleContentClick}
-          />
+          {content === null && !error ? (
+            <div className="changelog-loading">Loading...</div>
+          ) : (
+            <div 
+              className="changelog-content" 
+              dangerouslySetInnerHTML={{ __html: error || content || '' }}
+              onClick={handleContentClick}
+            />
+          )}
         </div>
       </div>
     </div>

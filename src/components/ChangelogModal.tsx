@@ -8,7 +8,8 @@ interface ChangelogModalProps {
 }
 
 export default function ChangelogModal({ onClose }: ChangelogModalProps) {
-  const [content, setContent] = useState<string>('Loading...');
+  const [content, setContent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -25,7 +26,7 @@ export default function ChangelogModal({ onClose }: ChangelogModalProps) {
       .catch(err => {
         console.error('Failed to load changelog:', err);
         if (mounted) {
-          setContent(
+          setError(
             '<p style="color: #ef4444;">Unable to load changelog. Please check your connection or visit the ' +
             '<a href="https://github.com/henrylay1/ManageDle/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>'
           );
@@ -47,7 +48,11 @@ export default function ChangelogModal({ onClose }: ChangelogModalProps) {
           <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body changelog-body">
-          <div className="changelog-content" dangerouslySetInnerHTML={{ __html: content }} />
+          {content === null && !error ? (
+            <div className="changelog-loading">Loading...</div>
+          ) : (
+            <div className="changelog-content" dangerouslySetInnerHTML={{ __html: error || content || '' }} />
+          )}
         </div>
       </div>
     </div>

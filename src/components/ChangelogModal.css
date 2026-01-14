@@ -28,3 +28,11 @@
   margin: 0.2rem 0 0.8rem 1.1rem;
 }
 .changelog-content li { margin-bottom: 0.25rem; }
+
+.changelog-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  color: var(--text-secondary, #888);
+}

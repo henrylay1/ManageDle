@@ -307,7 +307,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
           {/* Group filter - only show when in following mode */}
           {filterByFollowing && authUser && (
             <div className="mb-4">
-              <label className="form-label">Filter by group (optional):</label>
+              <label className="form-label">Filter by group:</label>
               {groupsLoading ? (
                 <div style={{ padding: '8px', color: 'var(--text-secondary)' }}>Loading groups...</div>
               ) : (
